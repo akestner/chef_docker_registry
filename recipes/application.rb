@@ -19,7 +19,6 @@
 #
 
 include_recipe 'docker-registry::default'
-include DockerRegistry
 
 application node['docker-registry'][:application_name] do
     owner node['docker-registry'][:owner]
