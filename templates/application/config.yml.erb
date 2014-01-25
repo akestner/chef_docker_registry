@@ -1,4 +1,4 @@
-# The `common' part is automatically included (and possibly overriden by all
+# The `common' part is automatically included (and possibly overridden by all
 # other flavors)
 common:
     storage: <%= @storage %>
@@ -16,8 +16,8 @@ common:
     <% end %>
 
 # This is the default configuration when no flavor is specified
-dev:
+development:
     loglevel: debug
 
-prod:
-    loglevel: warn
+production:
+    loglevel: error
