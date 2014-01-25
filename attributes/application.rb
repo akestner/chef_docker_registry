@@ -19,13 +19,11 @@
 # limitations under the License.
 #
 
-include 'openssl'
-
 default['docker-registry'][:server_name] = node[:fqdn] || node[:hostname]
 default['docker-registry'][:application_name] = 'docker-registry'
 
 default['docker-registry'][:flavor] = 'development'
-default['docker-registry'][:session_key] = OpenSSL::Random.base64(64)
+default['docker-registry'][:session_key] = '1234567891011121314151617181920212223242526272829303132333435363'
 default['docker-registry'][:s3_access_key_id] = nil
 default['docker-registry'][:s3_secret_access_key] = nil
 default['docker-registry'][:standalone] = true

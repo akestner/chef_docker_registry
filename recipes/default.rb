@@ -19,17 +19,21 @@
 #
 
 group node['docker-registry'][:group] do
-    gid node['docker-registry'][:gid]
+    action :create
+    only_if "egrep -i \"^#{node['docker-registry'][:group]}\" /etc/group && exit 0 || exit 1"
 end
 
 user node['docker-registry']['owner'] do
     gid node['docker-registry'][:group]
     home node['docker-registry'][:install_dir]
     shell '/bin/bash'
+    only_if "getent passwd #{node['docker-registry']['owner']} && exit 0 || exit 1"
 end
 
 directory node['docker-registry'][:storage_path] do
-    mode 0770
+    mode 0775
     owner node['docker-registry'][:owner]
     group node['docker-registry'][:group]
+    recursive true
+    action :create
 end

@@ -1,4 +1,5 @@
 .vagrant
+.DS_Store
 Berksfile.lock
 *~
 *#
@@ -9,6 +10,8 @@ Berksfile.lock
 *.iml
 .idea/
 /cookbooks
+/vendor/
+.chef/
 
 # Bundler
 Gemfile.lock
