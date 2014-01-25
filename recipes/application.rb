@@ -46,7 +46,7 @@ application node['docker-registry'][:application_name] do
             owner node['docker-registry'][:owner]
             group node['docker-registry'][:group]
             variables({
-                :session_key => data_bag[:session_key],
+                :secret_key => data_bag[:secret_key],
                 :storage => node['docker-registry'][:storage],
                 :storage_path => node['docker-registry'][:storage_path],
                 :standalone => node['docker-registry'][:standalone],
@@ -72,7 +72,7 @@ application node['docker-registry'][:application_name] do
 
     nginx_load_balancer do
         application_port node['docker-registry'][:internal_port]
-        application_server_role node['docker-registry'][:application_recipe]
+        application_server_role node['docker-registry'][:application_name]
         server_name node['docker-registry'][:server_name]
 
         template 'load_balancer.conf.erb'

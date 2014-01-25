@@ -5,8 +5,8 @@ common:
     storage_path: <%= @storage_path %>
     secret_key: <%= @secret_key %>
     <% if @storage == "s3" -%>
-    s3_access_key: <%= @s3_access_key %>
-    s3_secret_key: <%= @s3_secret_key %>
+    s3_access_key: <%= @s3_access_key_id %>
+    s3_secret_key: <%= @s3_secret_access_key %>
     s3_bucket: <%= @s3_bucket %>
     <% end %>
 
