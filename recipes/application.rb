@@ -19,6 +19,9 @@
 #
 
 include_recipe 'docker-registry::default'
+# Include Opscode helper in Recipe class to get access
+# to debian_before_squeeze? and ubuntu_before_lucid?
+::Chef::Recipe.send(:include, DockerRegistry::DataBag)
 
 application node['docker-registry'][:application_name] do
     owner node['docker-registry'][:owner]
@@ -33,7 +36,7 @@ application node['docker-registry'][:application_name] do
 
     before_migrate do
 
-        data_bag = DockerRegistry::DataBag.decrypt(
+        data_bag = decrypt_data_bag(
             node['docker-registry'][:data_bag],
             node['docker-registry'][:data_bag_item],
             Chef::Config[:encrypted_data_bag_secret]
@@ -71,13 +74,19 @@ application node['docker-registry'][:application_name] do
 
     nginx_load_balancer do
         application_port node['docker-registry'][:internal_port]
-        application_server_role node['docker-registry'][:application_name]
+        application_server_role node['docker-registry'][:application_server_role]
         server_name node['docker-registry'][:server_name]
+        set_host_header node['docker-registry'][:set_host_header]
+        ssl node['docker-registry'][:ssl]
 
         template 'load_balancer.conf.erb'
-        ssl node['docker-registry'][:ssl]
+
         if node['docker-registry'][:ssl]
-            certificate = DockerRegistry::DataBag.ssl_certificate
+            certificate = ssl_certificate(
+                node['docker-registry'][:data_bag],
+                node['docker-registry'][:data_bag_item],
+                Chef::Config[:encrypted_data_bag_secret]
+            )
             ssl_certificate certificate[:path]
             ssl_certificate_key certificate[:key_path]
         end

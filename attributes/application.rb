@@ -19,8 +19,9 @@
 # limitations under the License.
 #
 
-default['docker-registry'][:server_name] = node[:fqdn] || node[:hostname]
 default['docker-registry'][:application_name] = 'docker-registry'
+default['docker-registry'][:server_name] = node[:fqdn] || node[:hostname]
+default['docker-registry'][:application_server_role] = node['docker-registry'][:application_name]
 
 default['docker-registry'][:flavor] = 'development'
 default['docker-registry'][:secret_key] = '1234567891011121314151617181920212223242526272829303132333435363'
@@ -28,6 +29,7 @@ default['docker-registry'][:s3_access_key_id] = nil
 default['docker-registry'][:s3_secret_access_key] = nil
 default['docker-registry'][:standalone] = true
 default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
+default['docker-registry'][:set_host_header] = true
 
 default['docker-registry'][:internal_port] = 5000
 default['docker-registry'][:workers] = 8

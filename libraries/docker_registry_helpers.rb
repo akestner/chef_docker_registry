@@ -1,9 +1,8 @@
 require 'openssl'
-include Chef::Mixin::LanguageIncludeRecipe
 
 module DockerRegistry
     module DataBag
-        def decrypt(data_bag, data_bag_item, data_bag_secret)
+        def decrypt_data_bag(data_bag, data_bag_item, data_bag_secret)
             data_bag ||= node['docker-registry'][:data_bag]
             data_bag_item ||= node['docker-registry'][:data_bag_item] || node.chef_environment
 
@@ -21,7 +20,7 @@ module DockerRegistry
                     @data_bag_secret ||= Chef::EncryptedDataBagItem.load_secret(
                         (data_bag_secret || Chef::Config[:encrypted_data_bag_secret])
                     )
-                    self.decrypt data_bag, data_bag_item, @data_bag_secret
+                    self.decrypt_data_bag data_bag, data_bag_item, @data_bag_secret
                 end
 
                 if !@data_bag_item[:ssl_certificate].nil? && !@data_bag_item[:ssl_certificate_key].nil?
