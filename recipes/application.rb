@@ -60,6 +60,17 @@ application node['docker-registry'][:application_name] do
         end
     end
 
+    virtualenv_path = ::File.join(node['docker-registry'][:install_dir], '.virtualenv', node['docker-registry'][:tag])
+
+    directory virtualenv_path do
+        owner node['docker-registry'][:owner]
+        group node['docker-registry'][:group]
+        recursive true
+        mode 0776
+        action :create
+        only_if !::File.exists?(::File.expand_path?(virtualenv_path))
+    end
+
     gunicorn do
         requirements 'requirements.txt'
         max_requests node['docker-registry'][:max_requests]
@@ -68,7 +79,7 @@ application node['docker-registry'][:application_name] do
         workers node['docker-registry'][:workers]
         worker_class 'gevent'
         app_module 'wsgi:application'
-        virtualenv ::File.join(node['docker-registry'][:install_dir], '.virtualenv', node['docker-registry'][:tag])
+        virtualenv
         environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
     end
 
