@@ -8,6 +8,4 @@ version             '0.0.5'
 supports 'ubuntu'
 
 depends 'application', '~> 3.0'
-depends 'application_nginx'
-depends 'application_python'
 depends 'openssl'
