@@ -24,6 +24,8 @@ include_recipe 'docker-registry::default'
 ::Chef::Recipe.send(:include, DockerRegistry::DataBag)
 
 application node['docker-registry'][:application_name] do
+
+    name node['docker-registry'][:application_name]
     owner node['docker-registry'][:owner]
     group node['docker-registry'][:group]
     path node['docker-registry'][:install_dir]
