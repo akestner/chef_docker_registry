@@ -56,12 +56,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |global_config|
         end
 
         # disable default vagrant synced_folder
-        config.vm.synced_folder '.', '/vagrant', :disabled => true
+        config.vm.synced_folder '.', '/vagrant', :nfs => true
         config.vm.provision :shell, :inline => 'ulimit -n 10000'
 
         # resolve "stdin: is not a tty warning" for chef_solo provisioner
         # related issue and proposed fix: https://github.com/mitchellh/vagrant/issues/1673
-        #config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+        config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
 
         # An array of symbols representing groups of cookbook described in the Vagrantfile
         # to exclusively install and copy to Vagrant's shelf.
@@ -76,8 +76,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |global_config|
             chef.nfs = true
             chef.cookbooks_path = 'cookbooks'
 
-            #chef.encrypted_data_bag_secret_key_path = File.expand_path('~/.chef/encrypted_data_bag_secret')
-            #chef.encrypted_data_bag_secret = "#{chef.provisioning_path}/encrypted_data_bag_secret"
+            chef.encrypted_data_bag_secret_key_path = File.expand_path('~/.chef/encrypted_data_bag_secret')
+            chef.encrypted_data_bag_secret = "#{chef.provisioning_path}/encrypted_data_bag_secret"
 
             ['docker-registry::application', 'docker-registry::default'].each do |recipe|
                 chef.add_recipe recipe

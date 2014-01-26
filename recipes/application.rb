@@ -18,19 +18,20 @@
 # limitations under the License.
 #
 
-require 'chef/dsl/include_recipe'
-
 include_recipe 'application'
-include_recipe 'docker-registry::default'
+include_recipe 'application_python'
+include_recipe 'application_nginx'
+include_recipe 'gunicorn'
+include_recipe 'docker-registry::application'
 
-application node['docker-registry'][:application_name] do
-    name node['docker-registry'][:application_name]
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
-    path node['docker-registry'][:install_dir]
-    repository node['docker-registry'][:repository]
-    revision node['docker-registry'][:tag]
-    packages node['docker-registry'][:packages]
+application node['docker-registry']['application_name'] do
+    name node['docker-registry']['application_name']
+    owner node['docker-registry']['owner']
+    group node['docker-registry']['group']
+    path "#{node['docker-registry']['install_dir']}/app"
+    repository node['docker-registry']['repository']
+    revision node['docker-registry']['tag']
+    packages node['docker-registry']['packages']
 
     action :force_deploy
     symlinks 'config.yml' => 'config.yml'
@@ -38,34 +39,34 @@ application node['docker-registry'][:application_name] do
     before_migrate do
 
         data_bag = decrypt_data_bag(
-            node['docker-registry'][:data_bag],
-            node['docker-registry'][:data_bag_item],
-            Chef::Config[:encrypted_data_bag_secret]
+            node['docker-registry']['data_bag'],
+            node['docker-registry']['data_bag_item'],
+            Chef::Config['encrypted_data_bag_secret']
         )
 
         template "#{new_resource.path}/shared/config.yml" do
             source 'config.yml.erb'
             mode 0440
-            owner node['docker-registry'][:owner]
-            group node['docker-registry'][:group]
+            owner node['docker-registry']['owner']
+            group node['docker-registry']['group']
             variables({
-                :secret_key => data_bag[:secret_key],
-                :storage => node['docker-registry'][:storage],
-                :storage_path => node['docker-registry'][:storage_path],
-                :standalone => node['docker-registry'][:standalone],
-                :index_endpoint => node['docker-registry'][:index_endpoint],
-                :s3_access_key_id => data_bag[:s3_access_key_id],
-                :s3_secret_access_key => data_bag[:s3_secret_access_key],
-                :s3_bucket => node['docker-registry'][:s3_bucket],
+                :secret_key => data_bag['secret_key'],
+                :storage => node['docker-registry']['storage'],
+                :storage_path => node['docker-registry']['storage_path'],
+                :standalone => node['docker-registry']['standalone'],
+                :index_endpoint => node['docker-registry']['index_endpoint'],
+                :s3_access_key_id => data_bag['s3_access_key_id'],
+                :s3_secret_access_key => data_bag['s3_secret_access_key'],
+                :s3_bucket => node['docker-registry']['s3_bucket'],
             })
         end
     end
 
-    @virtualenv_path = ::File.expand_path("#{::ENV['WORKON_HOME']}" || "~/.virtualenvs")
+    @virtualenv_path = ENV['WORKON_HOME'] || '~/.virtualenvs'
 
     directory @virtualenv_path do
-        owner node['docker-registry'][:owner]
-        group node['docker-registry'][:group]
+        owner node['docker-registry']['owner']
+        group node['docker-registry']['group']
         recursive true
         mode 0777
         action :create
@@ -73,34 +74,35 @@ application node['docker-registry'][:application_name] do
 
     gunicorn do
         requirements 'requirements.txt'
-        max_requests node['docker-registry'][:max_requests]
-        timeout node['docker-registry'][:timeout]
-        port node['docker-registry'][:internal_port]
-        workers node['docker-registry'][:workers]
+        max_requests node['docker-registry']['max_requests']
+        timeout node['docker-registry']['timeout']
+        port node['docker-registry']['internal_port']
+        workers node['docker-registry']['workers']
         worker_class 'gevent'
         app_module 'wsgi:application'
+        debug true
         virtualenv @virtualenv_path
-        environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
-        directory node['docker-registry'][:storage_path]
+        environment :SETTINGS_FLAVOR => node['docker-registry']['flavor']
+        directory node['docker-registry']['storage_path']
     end
 
     nginx_load_balancer do
-        application_port node['docker-registry'][:internal_port]
-        application_server_role node['docker-registry'][:application_server_role]
-        server_name node['docker-registry'][:server_name]
-        set_host_header node['docker-registry'][:set_host_header]
-        ssl node['docker-registry'][:ssl]
+        application_port node['docker-registry']['internal_port']
+        application_server_role node['docker-registry']['application_server_role']
+        server_name node['docker-registry']['server_name']
+        set_host_header node['docker-registry']['set_host_header']
+        ssl node['docker-registry']['ssl']
 
         template 'load_balancer.conf.erb'
 
-        if node['docker-registry'][:ssl]
+        if node['docker-registry']['ssl']
             certificate = ssl_certificate(
-                node['docker-registry'][:data_bag],
-                node['docker-registry'][:data_bag_item],
-                Chef::Config[:encrypted_data_bag_secret]
+                node['docker-registry']['data_bag'],
+                node['docker-registry']['data_bag_item'],
+                Chef::Config['encrypted_data_bag_secret']
             )
-            ssl_certificate certificate[:path]
-            ssl_certificate_key certificate[:key_path]
+            ssl_certificate certificate['path']
+            ssl_certificate_key certificate['key_path']
         end
     end
 end

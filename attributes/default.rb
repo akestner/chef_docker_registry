@@ -19,11 +19,11 @@
 # limitations under the License.
 #
 
-default['docker-registry'][:repository] = 'https://github.com/dotcloud/docker-registry.git'
-default['docker-registry'][:tag] = '0.6.5'
-default['docker-registry'][:owner] = 'docker-registry'
-default['docker-registry'][:group] = 'docker-registry'
-default['docker-registry'][:install_dir] = '/usr/local/opt/docker-registry'
+default['docker-registry']['repository'] = 'https://github.com/dotcloud/docker-registry.git'
+default['docker-registry']['tag'] = '0.6.5'
+default['docker-registry']['owner'] = 'docker-registry'
+default['docker-registry']['group'] = 'docker-registry'
+default['docker-registry']['install_dir'] = '/usr/local/opt/docker-registry'
 
-default['docker-registry'][:storage] = 'local'
-default['docker-registry'][:storage_path] = '/var/lib/docker-registry'
+default['docker-registry']['storage'] = 'local'
+default['docker-registry']['storage_path'] = '/var/lib/docker-registry'

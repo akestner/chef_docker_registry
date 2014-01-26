@@ -18,29 +18,29 @@
 # limitations under the License.
 #
 
-group node['docker-registry'][:group] do
+group node['docker-registry']['group'] do
     action :create
-    only_if "! egrep -i \"^#{node['docker-registry'][:group]}\" /etc/group"
+    only_if "! egrep -i \"^#{node['docker-registry']['group']}\" /etc/group"
 end
 
 user node['docker-registry']['owner'] do
-    gid node['docker-registry'][:group]
-    home node['docker-registry'][:install_dir]
+    gid node['docker-registry']['group']
+    home node['docker-registry']['install_dir']
     shell '/bin/bash'
     only_if "! getent passwd #{node['docker-registry']['owner']}"
 end
 
-directory node['docker-registry'][:install_dir] do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+directory node['docker-registry']['install_dir'] do
+    owner node['docker-registry']['owner']
+    group node['docker-registry']['group']
     recursive true
     mode 0776
     action :create
 end
 
-directory node['docker-registry'][:storage_path] do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+directory node['docker-registry']['storage_path'] do
+    owner node['docker-registry']['owner']
+    group node['docker-registry']['group']
     recursive true
     mode 0776
     action :create
