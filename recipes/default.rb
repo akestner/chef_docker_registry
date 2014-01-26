@@ -18,30 +18,130 @@
 # limitations under the License.
 #
 
-group node['docker-registry']['group'] do
+include_recipe 'application::default'
+include_recipe 'application_python::default'
+include_recipe 'application_nginx::default'
+
+group node['docker-registry'][:application][:group] do
     action :create
-    only_if "! egrep -i \"^#{node['docker-registry']['group']}\" /etc/group"
+    only_if "! egrep -i \"^#{node['docker-registry'][:application][:group]}\" /etc/group"
 end
 
-user node['docker-registry']['owner'] do
-    gid node['docker-registry']['group']
-    home node['docker-registry']['install_dir']
+user node['docker-registry'][:application][:owner] do
+    gid node['docker-registry'][:application][:group]
+    home node['docker-registry'][:application][:path]
     shell '/bin/bash'
-    only_if "! getent passwd #{node['docker-registry']['owner']}"
+    only_if "! getent passwd #{node['docker-registry'][:application][:owner]} 2>&1 > /dev/null"
 end
 
-directory node['docker-registry']['install_dir'] do
-    owner node['docker-registry']['owner']
-    group node['docker-registry']['group']
+directory node['docker-registry'][:application][:path] do
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0776
     action :create
 end
 
-directory node['docker-registry']['storage_path'] do
-    owner node['docker-registry']['owner']
-    group node['docker-registry']['group']
+directory node['docker-registry'][:storage_path] do
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0776
     action :create
+end
+
+# make sure virtualenv has a place to work
+directory node['docker-registry'][:gunicorn][:virtualenv] do
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
+    recursive true
+    mode 0777
+    action :create
+end
+
+application "#{node['docker-registry'][:application][:name]}" do
+    name node['docker-registry'][:application][:name]
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
+    path node['docker-registry'][:application][:path]
+    repository node['docker-registry'][:application][:repository]
+    revision node['docker-registry'][:application][:revision]
+    packages node['docker-registry'][:application][:packages]
+    deploy_key nil
+
+    symlinks 'config.yml' => 'config.yml'
+
+    before_migrate do
+        data_bag = DockerRegistry.decrypt_data_bag(
+            node['docker-registry'][:data_bag],
+            node['docker-registry'][:data_bag_item],
+            ::Chef::Config[:encrypted_data_bag_secret]
+        )
+
+        template "#{new_resource.path}/shared/config.yml" do
+            source 'config.yml.erb'
+            mode 0440
+            owner node['docker-registry'][:application][:owner]
+            group node['docker-registry'][:application][:group]
+            variables({
+                :secret_key => data_bag[:secret_key],
+                :storage => node['docker-registry'][:storage],
+                :storage_path => node['docker-registry'][:storage_path],
+                :standalone => node['docker-registry'][:standalone],
+                :index_endpoint => node['docker-registry'][:index_endpoint],
+                :s3_access_key_id => data_bag[:s3_access_key_id],
+                :s3_secret_access_key => data_bag[:s3_secret_access_key],
+                :s3_bucket => node['docker-registry'][:s3_bucket],
+                :s3_encrypt => node['docker-registry'][:s3_encrypt],
+                :s3_secure => node['docker-registry'][:s3_secure]
+            })
+        end
+    end
+
+    gunicorn do
+        only_if { node['roles'].include? node['docker-registry'][:application][:server_role] }
+
+        max_requests node['docker-registry'][:gunicorn][:max_requests]
+        timeout node['docker-registry'][:gunicorn][:timeout]
+        port node['docker-registry'][:gunicorn][:internal_port]
+        workers node['docker-registry'][:gunicorn][:workers]
+        worker_class node['docker-registry'][:gunicorn][:worker_class]
+        logfile node['docker-registry'][:gunicorn][:log_file]
+        loglevel node['docker-registry'][:gunicorn][:log_level]
+        debug (node['docker-registry'][:gunicorn][:debug])
+        trace (node['docker-registry'][:gunicorn][:trace])
+        app_module node['docker-registry'][:gunicorn][:app_module]
+        virtualenv node['docker-registry'][:gunicorn][:virtualenv]
+        environment :SETTINGS_FLAVOR => node['docker-registry'][:gunicorn][:flavor]
+    end
+
+    nginx_load_balancer do
+        only_if { node['roles'].include? node['docker-registry'][:application][:load_balancer_role] }
+
+        application_server_role node['docker-registry'][:application][:server_role]
+        server_name node['docker-registry'][:nginx][:server_name]
+        port node['docker-registry'][:nginx][:port]
+        ssl node['docker-registry'][:nginx][:ssl]
+        set_host_header node['docker-registry'][:nginx][:set_host_header]
+        template 'nginx_load_balancer.conf.erb'
+
+        if node['docker-registry'][:nginx][:application_socket]
+            application_socket node['docker-registry'][:nginx][:application_socket]
+        else
+            hosts (node['docker-registry'][:nginx][:local_server] ? ['127.0.0.1'] : node['docker-registry'][:nginx][:hosts])
+            application_port node['docker-registry'][:gunicorn][:internal_port]
+        end
+
+        if node['docker-registry'][:nginx][:ssl]
+            certificate = DockerRegistry.ssl_certificate(
+                node['docker-registry'][:data_bag],
+                node['docker-registry'][:data_bag_item],
+                Chef::Config[:encrypted_data_bag_secret]
+            )
+            ssl_certificate certificate[:path]
+            ssl_certificate_key certificate[:key_path]
+        end
+    end
+
+    action :force_deploy
 end
