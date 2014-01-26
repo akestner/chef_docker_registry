@@ -18,10 +18,9 @@
 # limitations under the License.
 #
 
-include_recipe 'application'
-include_recipe 'application_python'
-include_recipe 'application_nginx'
-
+include_recipe 'application::default'
+include_recipe 'application_python::default'
+include_recipe 'application_nginx::default'
 
 group node['docker-registry'][:group] do
     action :create
@@ -32,7 +31,7 @@ user node['docker-registry'][:owner] do
     gid node['docker-registry'][:group]
     home node['docker-registry'][:install_dir]
     shell '/bin/bash'
-    only_if "! getent passwd #{node['docker-registry'][:owner]}"
+    only_if "! getent passwd #{node['docker-registry'][:owner]} 2>&1 > /dev/null"
 end
 
 directory node['docker-registry'][:install_dir] do
@@ -51,17 +50,55 @@ directory node['docker-registry'][:storage_path] do
     action :create
 end
 
+if node[:gunicorn][:virtualenv]
+    virtualenv_name = node[:gunicorn][:virtualenv]
+else
+    virtualenv_name = node['docker-registry'][:application_name]
+end
+
+if ::ENV['WORKON_HOME']
+    virtualenv_path = File.expand_path(
+        ::File.join(::ENV['WORKON_HOME'], virtualenv_name)
+    ).to_s
+else
+    virtualenv_path = File.expand_path(
+        ::File.join(::ENV['HOME'], '.virtualenvs', virtualenv_name)
+    ).to_s
+end
+
+# make sure virtualenv has a place to work
+directory virtualenv_path do
+    owner node['docker-registry'][:owner]
+    group node['docker-registry'][:group]
+    recursive true
+    mode 0777
+    action :create
+end
+
+gunicorn_working_dir = File.expand_path(node['docker-registry'][:working_dir]).to_s
+
+# make sure gunicorn has a place to work
+directory gunicorn_working_dir do
+    owner node['docker-registry'][:owner]
+    group node['docker-registry'][:group]
+    recursive true
+    mode 0777
+    action :create
+end
+
+gunicorn_install virtualenv_name do
+    action :install
+end
 
 application "#{node['docker-registry'][:application_name]}" do
     name node['docker-registry'][:application_name]
     owner node['docker-registry'][:owner]
     group node['docker-registry'][:group]
-    path node['docker-registry'][:install_dir]
+    path node['docker-registry'][:working_dir]
     repository node['docker-registry'][:repository]
     revision node['docker-registry'][:tag]
     packages node['docker-registry'][:packages]
 
-    action :force_deploy
     symlinks 'config.yml' => 'config.yml'
 
     before_migrate do
@@ -69,7 +106,7 @@ application "#{node['docker-registry'][:application_name]}" do
         data_bag = decrypt_data_bag(
             node['docker-registry'][:data_bag],
             node['docker-registry'][:data_bag_item],
-            Chef::Config[:encrypted_data_bag_secret]
+            ::Chef::Config[:encrypted_data_bag_secret]
         )
 
         template "#{new_resource.path}/shared/config.yml" do
@@ -90,44 +127,6 @@ application "#{node['docker-registry'][:application_name]}" do
         end
     end
 
-    virtualenv_path = ENV['WORKON_HOME'] || '~/.virtualenvs'
-
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: ENV['WORKON_HOME'] => #{ENV['WORKON_HOME']}"
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: directory => #{directory}"
-
-    # make sure virtualenv has a place to work
-    directory File.expand_path(virtualenv_path) do
-
-        Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: directory => #{directory}"
-        Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
-
-        owner node['docker-registry'][:owner]
-        group node['docker-registry'][:group]
-        recursive true
-        mode 0777
-        action :create
-    end
-
-    gunicorn_working_dir = File.expand_path(node['docker-registry'][:working_dir])
-
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: node['docker-registry'][:working_dir] => #{node['docker-registry'][:working_dir]}"
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
-    Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: gunicorn => #{gunicorn}"
-
-    # make sure gunicorn has a place to work
-    directory gunicorn_working_dir do
-
-        Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: directory => #{directory}"
-        Chef::Log.log Logger::INFO,  "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
-
-        owner node['docker-registry'][:owner]
-        group node['docker-registry'][:group]
-        recursive true
-        mode 0777
-        action :create
-    end
-
     gunicorn do
         only_if { node['roles'].include? node['docker-registry'][:application_python_role] }
         max_requests node['docker-registry'][:max_requests]
@@ -136,8 +135,7 @@ application "#{node['docker-registry'][:application_name]}" do
         workers node['docker-registry'][:workers]
         worker_class 'gevent'
         app_module 'wsgi:application'
-        debug true
-        virtualenv virtualenv_path
+        virtualenv virtualenv_name
         environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
         directory node['docker-registry'][:working_dir]
     end
@@ -166,4 +164,11 @@ application "#{node['docker-registry'][:application_name]}" do
             })
         end
     end
+
+    action :force_deploy
+end
+
+begin
+  rescue NameError
+  raise "#{node.to_json}"
 end
