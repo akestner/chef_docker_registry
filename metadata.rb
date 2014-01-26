@@ -14,3 +14,6 @@ depends 'application', '~> 3.0'
 depends 'application_nginx'
 depends 'application_python'
 depends 'openssl'
+
+provides 'service[application_python_gunicorn]'
+provides 'service[application_nginx_load_balancer]'
