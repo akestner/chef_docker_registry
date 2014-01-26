@@ -60,15 +60,16 @@ application node['docker-registry'][:application_name] do
         end
     end
 
-    virtualenv_path = ::File.join(node['docker-registry'][:install_dir], '.virtualenv', node['docker-registry'][:tag])
+
+    virtualenv_path = ::ENV['WORKON_HOME'] || "~/.virtualenvs"
 
     directory virtualenv_path do
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
         recursive true
-        mode 0776
+        mode 0777
         action :create
-        only_if !::File.exists?(::File.expand_path?(virtualenv_path))
+        only_if !::File.exists?(::File.expand_path(virtualenv_path))
     end
 
     gunicorn do
