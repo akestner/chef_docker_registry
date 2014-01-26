@@ -23,7 +23,32 @@ default['docker-registry']['repository'] = 'https://github.com/dotcloud/docker-r
 default['docker-registry']['tag'] = '0.6.5'
 default['docker-registry']['owner'] = 'docker-registry'
 default['docker-registry']['group'] = 'docker-registry'
-default['docker-registry']['install_dir'] = '/usr/local/opt/docker-registry'
+default['docker-registry']['install_dir'] = '/opt/docker-registry'
 
 default['docker-registry']['storage'] = 'local'
 default['docker-registry']['storage_path'] = '/var/lib/docker-registry'
+
+default['docker-registry']['application_name'] = 'docker-registry'
+default['docker-registry']['server_name'] = node['fqdn'] || node['hostname']
+default['docker-registry']['application_server_role'] = node['docker-registry']['application_server_role']
+default['docker-registry']['application_load_balancer_role'] = node['docker-registry']['application_load_balancer_role']
+
+default['docker-registry']['flavor'] = 'development'
+default['docker-registry']['secret_key'] = nil
+default['docker-registry']['s3_access_key_id'] = nil
+default['docker-registry']['s3_secret_access_key'] = nil
+default['docker-registry']['standalone'] = true
+default['docker-registry']['index_endpoint'] = 'https://index.docker.io'
+default['docker-registry']['set_host_header'] = true
+
+default['docker-registry']['internal_port'] = 5000
+default['docker-registry']['workers'] = 8
+default['docker-registry']['max_requests'] = 100
+default['docker-registry']['timeout'] = 3600
+default['docker-registry']['packages'] = ['libevent-dev']
+default['docker-registry']['working_dir'] = "#{node['docker-registry']['install_dir']}/current"
+
+default['docker-registry']['ssl'] = false
+default['docker-registry']['ssl_path'] = '/etc/ssl'
+default['docker-registry']['certificate_path'] = nil
+default['docker-registry']['certificate_key_path'] = nil
