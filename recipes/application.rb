@@ -18,14 +18,10 @@
 # limitations under the License.
 #
 
-#depends 'application_nginx'
-#depends 'application_python'
+require 'chef/dsl/include_recipe'
 
+include_recipe 'application'
 include_recipe 'docker-registry::default'
-
-# Include Opscode helper in Recipe class to get access
-# to debian_before_squeeze? and ubuntu_before_lucid?
-::Chef::Recipe.send(:include, DockerRegistry::DataBag)
 
 application node['docker-registry'][:application_name] do
     name node['docker-registry'][:application_name]
@@ -65,7 +61,9 @@ application node['docker-registry'][:application_name] do
         end
     end
 
-    directory File.expand_path("#{::ENV['WORKON_HOME']}" || "~/.virtualenvs") do
+    @virtualenv_path = ::File.expand_path("#{::ENV['WORKON_HOME']}" || "~/.virtualenvs")
+
+    directory @virtualenv_path do
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
         recursive true
@@ -81,8 +79,9 @@ application node['docker-registry'][:application_name] do
         workers node['docker-registry'][:workers]
         worker_class 'gevent'
         app_module 'wsgi:application'
-        virtualenv
+        virtualenv @virtualenv_path
         environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
+        directory node['docker-registry'][:storage_path]
     end
 
     nginx_load_balancer do
