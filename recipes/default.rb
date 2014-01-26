@@ -18,8 +18,6 @@
 # limitations under the License.
 #
 
-include Chef::Provider::Log::ChefLog
-
 include_recipe 'application'
 include_recipe 'application_python'
 include_recipe 'application_nginx'
@@ -94,15 +92,15 @@ application "#{node['docker-registry'][:application_name]}" do
 
     virtualenv_path = ENV['WORKON_HOME'] || '~/.virtualenvs'
 
-    log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
-    log "docker-registry/recipe/default.rb:: ENV['WORKON_HOME'] => #{ENV['WORKON_HOME']}"
-    log "docker-registry/recipe/default.rb:: directory => #{directory}"
+    Chef::Log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
+    Chef::Log "docker-registry/recipe/default.rb:: ENV['WORKON_HOME'] => #{ENV['WORKON_HOME']}"
+    Chef::Log "docker-registry/recipe/default.rb:: directory => #{directory}"
 
     # make sure virtualenv has a place to work
     directory File.expand_path(virtualenv_path) do
 
-        log "docker-registry/recipe/default.rb:: directory => #{directory}"
-        log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
+        Chef::Log "docker-registry/recipe/default.rb:: directory => #{directory}"
+        Chef::Log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
 
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
@@ -113,15 +111,15 @@ application "#{node['docker-registry'][:application_name]}" do
 
     gunicorn_working_dir = File.expand_path(node['docker-registry'][:working_dir])
 
-    log "docker-registry/recipe/default.rb:: node['docker-registry'][:working_dir] => #{node['docker-registry'][:working_dir]}"
-    log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
-    log "docker-registry/recipe/default.rb:: gunicorn => #{gunicorn}"
+    Chef::Log "docker-registry/recipe/default.rb:: node['docker-registry'][:working_dir] => #{node['docker-registry'][:working_dir]}"
+    Chef::Log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
+    Chef::Log "docker-registry/recipe/default.rb:: gunicorn => #{gunicorn}"
 
     # make sure gunicorn has a place to work
     directory gunicorn_working_dir do
 
-        log "docker-registry/recipe/default.rb:: directory => #{directory}"
-        log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
+        Chef::Log "docker-registry/recipe/default.rb:: directory => #{directory}"
+        Chef::Log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
 
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
