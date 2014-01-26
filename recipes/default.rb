@@ -18,6 +18,8 @@
 # limitations under the License.
 #
 
+include Chef::Provider::Log::ChefLog
+
 include_recipe 'application'
 include_recipe 'application_python'
 include_recipe 'application_nginx'
