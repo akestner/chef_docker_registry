@@ -21,6 +21,7 @@
 
 default['docker-registry']['application_name'] = 'docker-registry'
 default['docker-registry']['server_name'] = node['fqdn'] || node['hostname']
+default['docker-registry']['application_path'] = "~/#{node['docker-registry']['application_name']}"
 default['docker-registry']['application_server_role'] = 'hgdocker-registry'
 
 default['docker-registry']['flavor'] = 'development'

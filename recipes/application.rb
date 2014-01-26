@@ -21,14 +21,13 @@
 include_recipe 'application'
 include_recipe 'application_python'
 include_recipe 'application_nginx'
-include_recipe 'gunicorn'
 include_recipe 'docker-registry::application'
 
 application node['docker-registry']['application_name'] do
     name node['docker-registry']['application_name']
     owner node['docker-registry']['owner']
     group node['docker-registry']['group']
-    path "#{node['docker-registry']['install_dir']}/app"
+    path node['docker-registry']['application_path']
     repository node['docker-registry']['repository']
     revision node['docker-registry']['tag']
     packages node['docker-registry']['packages']
@@ -83,7 +82,7 @@ application node['docker-registry']['application_name'] do
         debug true
         virtualenv @virtualenv_path
         environment :SETTINGS_FLAVOR => node['docker-registry']['flavor']
-        directory node['docker-registry']['storage_path']
+        directory node['docker-registry']['application_path']
     end
 
     nginx_load_balancer do
