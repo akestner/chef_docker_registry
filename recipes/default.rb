@@ -36,7 +36,6 @@ directory node['docker-registry'][:install_dir] do
     recursive true
     mode 0776
     action :create
-    only_if !::File.exists?(::File.expand_path(node['docker-registry'][:install_dir]))
 end
 
 directory node['docker-registry'][:storage_path] do
@@ -45,5 +44,4 @@ directory node['docker-registry'][:storage_path] do
     recursive true
     mode 0776
     action :create
-    only_if !::File.exists?(::File.expand_path(node['docker-registry'][:storage_path]))
 end

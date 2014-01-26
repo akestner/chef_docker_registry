@@ -86,12 +86,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |global_config|
             chef.json = {
                 'docker-registry' => {
                     :owner => 'vagrant',
-                    :group => 'vagrant',
-                    :secret_key => 'fksldjriohl2kfsn2lh342kjfdeaslhkhfskjnhalknfk4232snfkldjfsdf3242'
+                    :group => 'vagrant'
                 }
             }
 
-            #chef.custom_config_path = 'chef_streaming_fix.rb'
+            chef.custom_config_path = 'chef_streaming_fix.rb'
         end
     end
 end
