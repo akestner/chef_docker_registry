@@ -18,13 +18,17 @@
 # limitations under the License.
 #
 
+include_recipe 'application'
+include_recipe 'application_nginx'
+include_recipe 'application_python'
+
 include_recipe 'docker-registry::default'
+
 # Include Opscode helper in Recipe class to get access
 # to debian_before_squeeze? and ubuntu_before_lucid?
 ::Chef::Recipe.send(:include, DockerRegistry::DataBag)
 
 application node['docker-registry'][:application_name] do
-
     name node['docker-registry'][:application_name]
     owner node['docker-registry'][:owner]
     group node['docker-registry'][:group]
