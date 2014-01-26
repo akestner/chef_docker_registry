@@ -18,9 +18,8 @@
 # limitations under the License.
 #
 
-include_recipe 'application'
-include_recipe 'application_nginx'
-include_recipe 'application_python'
+#depends 'application_nginx'
+#depends 'application_python'
 
 include_recipe 'docker-registry::default'
 

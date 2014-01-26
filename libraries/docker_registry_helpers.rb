@@ -1,5 +1,3 @@
-require 'openssl'
-
 module DockerRegistry
     module DataBag
         def decrypt_data_bag(data_bag, data_bag_item, data_bag_secret)
