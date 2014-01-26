@@ -10,7 +10,7 @@ recipe  'application', "Installs the docker-registry python application, daemoni
 
 supports 'ubuntu'
 
-depends 'openssl'
-depends 'application', '~> 4.1'
+depends 'application', '~> 3.0'
 depends 'application_nginx'
 depends 'application_python'
+depends 'openssl'
