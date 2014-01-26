@@ -19,36 +19,35 @@
 # limitations under the License.
 #
 
-default['docker-registry']['repository'] = 'https://github.com/dotcloud/docker-registry.git'
-default['docker-registry']['tag'] = '0.6.5'
-default['docker-registry']['owner'] = 'docker-registry'
-default['docker-registry']['group'] = 'docker-registry'
-default['docker-registry']['install_dir'] = '/opt/docker-registry'
+node.default['docker-registry'][:repository] = 'https://github.com/dotcloud/docker-registry.git'
+node.default['docker-registry'][:tag] = '0.6.5'
+node.default['docker-registry'][:owner] = 'docker-registry'
+node.default['docker-registry'][:group] = 'docker-registry'
+node.default['docker-registry'][:install_dir] = '/opt/docker-registry'
 
-default['docker-registry']['storage'] = 'local'
-default['docker-registry']['storage_path'] = '/var/lib/docker-registry'
+node.default['docker-registry'][:application_name] = 'docker-registry'
+node.default['docker-registry'][:server_name] = node[:fqdn] || node[:hostname]
+node.default['docker-registry'][:application_server_role] = node['docker-registry'][:application_python_role]
+node.default['docker-registry'][:application_load_balancer_role] = node['docker-registry'][:application_nginx_role]
 
-default['docker-registry']['application_name'] = 'docker-registry'
-default['docker-registry']['server_name'] = node['fqdn'] || node['hostname']
-default['docker-registry']['application_server_role'] = node['docker-registry']['application_server_role']
-default['docker-registry']['application_load_balancer_role'] = node['docker-registry']['application_load_balancer_role']
+node.default['docker-registry'][:flavor] = 'development'
+node.default['docker-registry'][:storage] = 's3'
+node.default['docker-registry'][:storage_path] = "registry/#{(node.chef_environment || 'development')}"
+node.default['docker-registry'][:secret_key] = nil
+node.default['docker-registry'][:s3_access_key_id] = nil
+node.default['docker-registry'][:s3_secret_access_key] = nil
+node.default['docker-registry'][:standalone] = true
+node.default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
+node.default['docker-registry'][:set_host_header] = true
 
-default['docker-registry']['flavor'] = 'development'
-default['docker-registry']['secret_key'] = nil
-default['docker-registry']['s3_access_key_id'] = nil
-default['docker-registry']['s3_secret_access_key'] = nil
-default['docker-registry']['standalone'] = true
-default['docker-registry']['index_endpoint'] = 'https://index.docker.io'
-default['docker-registry']['set_host_header'] = true
+node.default['docker-registry'][:internal_port] = 5000
+node.default['docker-registry'][:workers] = 8
+node.default['docker-registry'][:max_requests] = 100
+node.default['docker-registry'][:timeout] = 3600
+node.default['docker-registry'][:packages] = ['libevent-dev']
+node.default['docker-registry'][:working_dir] = "#{node['docker-registry']['install_dir']}/current"
 
-default['docker-registry']['internal_port'] = 5000
-default['docker-registry']['workers'] = 8
-default['docker-registry']['max_requests'] = 100
-default['docker-registry']['timeout'] = 3600
-default['docker-registry']['packages'] = ['libevent-dev']
-default['docker-registry']['working_dir'] = "#{node['docker-registry']['install_dir']}/current"
-
-default['docker-registry']['ssl'] = false
-default['docker-registry']['ssl_path'] = '/etc/ssl'
-default['docker-registry']['certificate_path'] = nil
-default['docker-registry']['certificate_key_path'] = nil
+node.default['docker-registry'][:ssl] = false
+node.default['docker-registry'][:ssl_path] = '/etc/ssl'
+node.default['docker-registry'][:certificate_path] = nil
+node.default['docker-registry'][:certificate_key_path] = nil

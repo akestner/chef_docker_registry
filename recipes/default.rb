@@ -52,7 +52,7 @@ directory node['docker-registry'][:storage_path] do
 end
 
 
-application node['docker-registry'][:application_name] do
+application "#{node['docker-registry'][:application_name]}" do
     name node['docker-registry'][:application_name]
     owner node['docker-registry'][:owner]
     group node['docker-registry'][:group]
@@ -90,9 +90,37 @@ application node['docker-registry'][:application_name] do
         end
     end
 
-    virtualenv_path = ::ENV['WORKON_HOME'] || '~/.virtualenvs'
+    virtualenv_path = ENV['WORKON_HOME'] || '~/.virtualenvs'
 
-    directory virtualenv_path do
+    log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
+    log "docker-registry/recipe/default.rb:: ENV['WORKON_HOME'] => #{ENV['WORKON_HOME']}"
+    log "docker-registry/recipe/default.rb:: directory => #{directory}"
+
+    # make sure virtualenv has a place to work
+    directory File.expand_path(virtualenv_path) do
+
+        log "docker-registry/recipe/default.rb:: directory => #{directory}"
+        log "docker-registry/recipe/default.rb:: virtualenv_path => #{virtualenv_path}"
+
+        owner node['docker-registry'][:owner]
+        group node['docker-registry'][:group]
+        recursive true
+        mode 0777
+        action :create
+    end
+
+    gunicorn_working_dir = File.expand_path(node['docker-registry'][:working_dir])
+
+    log "docker-registry/recipe/default.rb:: node['docker-registry'][:working_dir] => #{node['docker-registry'][:working_dir]}"
+    log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
+    log "docker-registry/recipe/default.rb:: gunicorn => #{gunicorn}"
+
+    # make sure gunicorn has a place to work
+    directory gunicorn_working_dir do
+
+        log "docker-registry/recipe/default.rb:: directory => #{directory}"
+        log "docker-registry/recipe/default.rb:: gunicorn_working_dir => #{gunicorn_working_dir}"
+
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
         recursive true
@@ -123,7 +151,6 @@ application node['docker-registry'][:application_name] do
         ssl node['docker-registry'][:ssl]
 
         template "#{node['docker-registry'][:application_name]}_nginx.conf.erb"
-        source 'docker-registry.conf.erb'
         mode 0755
         owner node['docker-registry'][:owner]
         group node['docker-registry'][:group]
