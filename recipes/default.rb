@@ -127,7 +127,7 @@ application "#{node['docker-registry'][:application_name]}" do
         end
     end
 
-    resource('service[gunicorn]') do
+    gunicorn do
         only_if { node['roles'].include? node['docker-registry'][:application_python_role] }
         max_requests node['docker-registry'][:max_requests]
         timeout node['docker-registry'][:timeout]
@@ -140,7 +140,7 @@ application "#{node['docker-registry'][:application_name]}" do
         directory node['docker-registry'][:working_dir]
     end
 
-    resource('service[nginx_load_balancer]') do
+    nginx_load_balancer do
         only_if { node['roles'].include? node['docker-registry'][:application_nginx_role] }
         application_port node['docker-registry'][:internal_port]
         application_server_role node['docker-registry'][:application_python_role]
