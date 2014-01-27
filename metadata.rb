@@ -7,6 +7,6 @@ version             '0.0.5'
 
 supports 'ubuntu'
 
-depends 'application'
+depends 'application', '~> 4.1.2'
 depends 'application_python'
 depends 'application_nginx'
