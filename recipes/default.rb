@@ -86,10 +86,6 @@ directory gunicorn_working_dir do
     action :create
 end
 
-gunicorn_install virtualenv_name do
-    action :install
-end
-
 application "#{node['docker-registry'][:application_name]}" do
     name node['docker-registry'][:application_name]
     owner node['docker-registry'][:owner]
@@ -135,9 +131,9 @@ application "#{node['docker-registry'][:application_name]}" do
         workers node['docker-registry'][:workers]
         worker_class 'gevent'
         app_module 'wsgi:application'
-        virtualenv virtualenv_name
+        virtualenv virtualenv_path
         environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
-        directory node['docker-registry'][:working_dir]
+        directory gunicorn_working_dir
     end
 
     nginx_load_balancer do
