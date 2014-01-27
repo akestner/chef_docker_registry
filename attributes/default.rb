@@ -19,17 +19,6 @@
 # limitations under the License.
 #
 
-node.default['docker-registry'][:repository] = 'https://github.com/dotcloud/docker-registry.git'
-node.default['docker-registry'][:tag] = '0.6.5'
-node.default['docker-registry'][:owner] = 'docker-registry'
-node.default['docker-registry'][:group] = 'docker-registry'
-node.default['docker-registry'][:install_dir] = '/opt/docker-registry'
-
-node.default['docker-registry'][:application_name] = 'docker-registry'
-node.default['docker-registry'][:server_name] = node[:fqdn] || node[:hostname]
-node.default['docker-registry'][:application_server_role] = node['docker-registry'][:application_python_role]
-node.default['docker-registry'][:application_load_balancer_role] = node['docker-registry'][:application_nginx_role]
-
 node.default['docker-registry'][:flavor] = 'development'
 node.default['docker-registry'][:storage] = 's3'
 node.default['docker-registry'][:storage_path] = "registry/#{(node.chef_environment || 'development')}"
@@ -38,16 +27,36 @@ node.default['docker-registry'][:s3_access_key_id] = nil
 node.default['docker-registry'][:s3_secret_access_key] = nil
 node.default['docker-registry'][:standalone] = true
 node.default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
-node.default['docker-registry'][:set_host_header] = true
 
-node.default['docker-registry'][:internal_port] = 5000
-node.default['docker-registry'][:workers] = 8
-node.default['docker-registry'][:max_requests] = 100
-node.default['docker-registry'][:timeout] = 3600
-node.default['docker-registry'][:packages] = ['libevent-dev']
-node.default['docker-registry'][:working_dir] = "#{node['docker-registry']['install_dir']}/current"
 
-node.default['docker-registry'][:ssl] = false
-node.default['docker-registry'][:ssl_path] = '/etc/ssl'
-node.default['docker-registry'][:certificate_path] = nil
-node.default['docker-registry'][:certificate_key_path] = nil
+node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
+node.default['docker-registry'][:application][:revision] = '0.6.5'
+node.default['docker-registry'][:application][:owner] = 'docker-registry'
+node.default['docker-registry'][:application][:group] = 'docker-registry'
+node.default['docker-registry'][:application][:install_dir] = '/opt/docker-registry'
+
+node.default['docker-registry'][:application][:name] = 'docker-registry'
+node.default['docker-registry'][:application][:packages] = ['libevent-dev']
+node.default['docker-registry'][:application][:server_role] = "#{node['docker-registry'][:application][:name]}_application_python"
+node.default['docker-registry'][:application][:load_balancer_role] = "#{node['docker-registry'][:application][:name]}_application_nginx"
+
+node.default['docker-registry'][:gunicorn][:virtualenv_name] = node['docker-registry'][:application][:name]
+node.default['docker-registry'][:gunicorn][:internal_port] = 5000
+node.default['docker-registry'][:gunicorn][:app_module] = 'wsgi:application'
+node.default['docker-registry'][:gunicorn][:workers] = 8
+node.default['docker-registry'][:gunicorn][:worker_class] = 'gevent'
+node.default['docker-registry'][:gunicorn][:max_requests] = 100
+node.default['docker-registry'][:gunicorn][:timeout] = 3600
+node.default['docker-registry'][:gunicorn][:working_dir] = "#{node['docker-registry'][:application][:install_dir]}/current"
+node.default['docker-registry'][:gunicorn][:log_file] = '-'
+node.default['docker-registry'][:gunicorn][:log_level] = :info
+node.default['docker-registry'][:gunicorn][:debug] = false
+node.default['docker-registry'][:gunicorn][:trace] = false
+
+node.default['docker-registry'][:nginx][:server_name] = nil # ie. must be set by user
+node.default['docker-registry'][:nginx][:ssl] = false
+node.default['docker-registry'][:nginx][:ssl_path] = '/etc/ssl'
+node.default['docker-registry'][:nginx][:certificate_path] = nil
+node.default['docker-registry'][:nginx][:certificate_key_path] = nil
+node.default['docker-registry'][:nginx][:set_host_header] = true
+

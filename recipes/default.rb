@@ -22,38 +22,38 @@ include_recipe 'application::default'
 include_recipe 'application_python::default'
 include_recipe 'application_nginx::default'
 
-group node['docker-registry'][:group] do
+group node['docker-registry'][:application][:group] do
     action :create
-    only_if "! egrep -i \"^#{node['docker-registry'][:group]}\" /etc/group"
+    only_if "! egrep -i \"^#{node['docker-registry'][:application][:group]}\" /etc/group"
 end
 
-user node['docker-registry'][:owner] do
-    gid node['docker-registry'][:group]
-    home node['docker-registry'][:install_dir]
+user node['docker-registry'][:application][:owner] do
+    gid node['docker-registry'][:application][:group]
+    home node['docker-registry'][:application][:install_dir]
     shell '/bin/bash'
-    only_if "! getent passwd #{node['docker-registry'][:owner]} 2>&1 > /dev/null"
+    only_if "! getent passwd #{node['docker-registry'][:application][:owner]} 2>&1 > /dev/null"
 end
 
-directory node['docker-registry'][:install_dir] do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+directory node['docker-registry'][:application][:install_dir] do
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0776
     action :create
 end
 
 directory node['docker-registry'][:storage_path] do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0776
     action :create
 end
 
-if node[:gunicorn][:virtualenv]
-    virtualenv_name = node[:gunicorn][:virtualenv]
+if node['docker-registry'][:gunicorn][:virtualenv_name]
+    virtualenv_name = node['docker-registry'][:gunicorn][:virtualenv_name]
 else
-    virtualenv_name = node['docker-registry'][:application_name]
+    virtualenv_name = node['docker-registry'][:application][:name]
 end
 
 if ::ENV['WORKON_HOME']
@@ -68,37 +68,36 @@ end
 
 # make sure virtualenv has a place to work
 directory virtualenv_path do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0777
     action :create
 end
 
-gunicorn_working_dir = File.expand_path(node['docker-registry'][:working_dir]).to_s
+gunicorn_working_dir = File.expand_path(node['docker-registry'][:gunicorn][:working_dir]).to_s
 
 # make sure gunicorn has a place to work
 directory gunicorn_working_dir do
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
     recursive true
     mode 0777
     action :create
 end
 
-application "#{node['docker-registry'][:application_name]}" do
-    name node['docker-registry'][:application_name]
-    owner node['docker-registry'][:owner]
-    group node['docker-registry'][:group]
-    path node['docker-registry'][:working_dir]
-    repository node['docker-registry'][:repository]
-    revision node['docker-registry'][:tag]
-    packages node['docker-registry'][:packages]
+application "#{node['docker-registry'][:application][:name]}" do
+    name node['docker-registry'][:application][:name]
+    owner node['docker-registry'][:application][:owner]
+    group node['docker-registry'][:application][:group]
+    path node['docker-registry'][:application][:install_dir]
+    repository node['docker-registry'][:application][:repository]
+    revision node['docker-registry'][:application][:revision]
+    packages node['docker-registry'][:application][:packages]
 
     symlinks 'config.yml' => 'config.yml'
 
     before_migrate do
-
         data_bag = DockerRegistry.decrypt_data_bag(
             node['docker-registry'][:data_bag],
             node['docker-registry'][:data_bag_item],
@@ -108,8 +107,8 @@ application "#{node['docker-registry'][:application_name]}" do
         template "#{new_resource.path}/shared/config.yml" do
             source 'config.yml.erb'
             mode 0440
-            owner node['docker-registry'][:owner]
-            group node['docker-registry'][:group]
+            owner node['docker-registry'][:application][:owner]
+            group node['docker-registry'][:application][:group]
             variables({
                 :secret_key => data_bag[:secret_key],
                 :storage => node['docker-registry'][:storage],
@@ -124,28 +123,32 @@ application "#{node['docker-registry'][:application_name]}" do
     end
 
     gunicorn do
-        only_if { node['roles'].include? node['docker-registry'][:application_python_role] }
-        max_requests node['docker-registry'][:max_requests]
-        timeout node['docker-registry'][:timeout]
-        port node['docker-registry'][:internal_port]
-        workers node['docker-registry'][:workers]
-        worker_class 'gevent'
-        app_module 'wsgi:application'
+        only_if { node['roles'].include? node['docker-registry'][:application][:server_role] }
+        max_requests node['docker-registry'][:gunicorn][:max_requests]
+        timeout node['docker-registry'][:gunicorn][:timeout]
+        port node['docker-registry'][:gunicorn][:internal_port]
+        workers node['docker-registry'][:gunicorn][:workers]
+        worker_class node['docker-registry'][:gunicorn][:worker_class]
+        logfile node['docker-registry'][:gunicorn][:log_file]
+        loglevel node['docker-registry'][:gunicorn][:log_level]
+        debug (node['docker-registry'][:gunicorn][:debug])
+        trace (node['docker-registry'][:gunicorn][:trace])
+        app_module node['docker-registry'][:gunicorn][:app_module]
         virtualenv virtualenv_path
-        environment :SETTINGS_FLAVOR => node['docker-registry'][:flavor]
+        environment :SETTINGS_FLAVOR => node['docker-registry'][:gunicorn][:flavor]
         directory gunicorn_working_dir
     end
 
     nginx_load_balancer do
-        only_if { node['roles'].include? node['docker-registry'][:application_nginx_role] }
-        application_port node['docker-registry'][:internal_port]
-        application_server_role node['docker-registry'][:application_python_role]
-        server_name node['docker-registry'][:server_name]
-        set_host_header node['docker-registry'][:set_host_header]
-        ssl node['docker-registry'][:ssl]
+        only_if { node['roles'].include? node['docker-registry'][:application][:load_balancer_role] }
+        application_port node['docker-registry'][:gunicorn][:internal_port]
+        application_server_role node['docker-registry'][:application][:server_role]
+        server_name node['docker-registry'][:nginx][:server_name]
+        set_host_header node['docker-registry'][:nginx][:set_host_header]
+        ssl node['docker-registry'][:nginx][:ssl]
 
-        template "#{node['docker-registry'][:application_name]}_nginx.conf.erb"
-        if node['docker-registry'][:ssl]
+        template "#{node['docker-registry'][:application][:name]}_nginx.conf.erb"
+        if node['docker-registry'][:nginx][:ssl]
             certificate = DockerRegistry.ssl_certificate(
                 node['docker-registry'][:data_bag],
                 node['docker-registry'][:data_bag_item],
