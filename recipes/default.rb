@@ -99,7 +99,7 @@ application "#{node['docker-registry'][:application_name]}" do
 
     before_migrate do
 
-        data_bag = decrypt_data_bag(
+        data_bag = DockerRegistry.decrypt_data_bag(
             node['docker-registry'][:data_bag],
             node['docker-registry'][:data_bag_item],
             ::Chef::Config[:encrypted_data_bag_secret]
@@ -146,7 +146,7 @@ application "#{node['docker-registry'][:application_name]}" do
 
         template "#{node['docker-registry'][:application_name]}_nginx.conf.erb"
         if node['docker-registry'][:ssl]
-            certificate = ssl_certificate(
+            certificate = DockerRegistry.ssl_certificate(
                 node['docker-registry'][:data_bag],
                 node['docker-registry'][:data_bag_item],
                 Chef::Config[:encrypted_data_bag_secret]
