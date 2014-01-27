@@ -149,9 +149,6 @@ application "#{node['docker-registry'][:application_name]}" do
         ssl node['docker-registry'][:ssl]
 
         template "#{node['docker-registry'][:application_name]}_nginx.conf.erb"
-        mode 0755
-        owner node['docker-registry'][:owner]
-        group node['docker-registry'][:group]
         if node['docker-registry'][:ssl]
             certificate = ssl_certificate(
                 node['docker-registry'][:data_bag],
