@@ -12,7 +12,7 @@ Vagrant.require_version ">= 1.4.0"
 Vagrant.require_plugin 'vagrant-berkshelf'
 Vagrant.require_plugin 'vagrant-omnibus'
 
-VM_NAME = 'docker-registry'
+VM_NAME = 'docker_registry'
 BOX_NAME_BASE = 'ubuntu64-12.04.3'
 BOX_URL_BASE = 'http://hgvagrant.s3.amazonaws.com/ubuntu64-12.04.3'
 VAGRANT_SSH_KEY = ENV['VAGRANT_SSH_KEY']
@@ -79,16 +79,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |global_config|
             chef.encrypted_data_bag_secret_key_path = File.expand_path('~/.chef/encrypted_data_bag_secret')
             chef.encrypted_data_bag_secret = "#{chef.provisioning_path}/encrypted_data_bag_secret"
 
-            ['docker-registry::application', 'docker-registry::default'].each do |recipe|
+            ['docker_registry::default'].each do |recipe|
                 chef.add_recipe recipe
             end
-
-            chef.json = {
-                'docker-registry' => {
-                    :owner => 'vagrant',
-                    :group => 'vagrant'
-                }
-            }
 
             chef.custom_config_path = 'chef_streaming_fix.rb'
         end

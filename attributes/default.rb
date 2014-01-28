@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: docker-registry
+# Cookbook Name:: docker_registry
 # Attributes:: default
 #
 # Author:: Alex Kestner <akestner@healthguru.com>
@@ -19,50 +19,29 @@
 # limitations under the License.
 #
 
-node.default['docker-registry'][:flavor] = 'development'
-node.default['docker-registry'][:storage] = 's3'
-node.default['docker-registry'][:storage_path] = "registry/#{(node.chef_environment || 'development')}"
-node.default['docker-registry'][:secret_key] = nil
-node.default['docker-registry'][:s3_access_key_id] = nil
-node.default['docker-registry'][:s3_secret_access_key] = nil
-node.default['docker-registry'][:s3_encrypt] = true
-node.default['docker-registry'][:s3_secure] = true
-node.default['docker-registry'][:standalone] = true
-node.default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
+include_attribute 'chef-docker::default'
 
-node.default['docker-registry'][:application][:name] = 'docker-registry'
-node.default['docker-registry'][:application][:owner] = 'docker-registry'
-node.default['docker-registry'][:application][:group] = 'docker-registry'
-node.default['docker-registry'][:application][:path] = '/opt/docker-registry'
-node.default['docker-registry'][:application][:deploy_key] = nil
-node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
-node.default['docker-registry'][:application][:revision] = '0.6.5'
-node.default['docker-registry'][:application][:packages] = ['build-essential', 'python-dev', 'libevent-dev', 'python-pip', 'libssl-dev', 'liblzma-dev'] # taken from dotcloud/docker-registry install instructions
-node.default['docker-registry'][:application][:server_role] = "#{node['docker-registry'][:application][:name]}_application_python"
-node.default['docker-registry'][:application][:load_balancer_role] = "#{node['docker-registry'][:application][:name]}_application_nginx"
+node.default[:docker_registry][:flavor] = 'development'
+node.default[:docker_registry][:storage] = 's3'
+node.default[:docker_registry][:storage_path] = "registry/#{(node.chef_environment || 'development')}"
+node.default[:docker_registry][:secret_key] = nil
+node.default[:docker_registry][:s3_access_key_id] = nil
+node.default[:docker_registry][:s3_secret_access_key] = nil
+node.default[:docker_registry][:s3_encrypt] = true
+node.default[:docker_registry][:s3_secure] = true
+node.default[:docker_registry][:standalone] = true
+node.default[:docker_registry][:index_endpoint] = 'https://index.docker.io'
 
-node.default['docker-registry'][:gunicorn][:virtualenv] = "#{node['docker-registry'][:application][:path]}/shared/env"
-node.default['docker-registry'][:gunicorn][:internal_port] = 5000
-node.default['docker-registry'][:gunicorn][:app_module] = 'wsgi:application'
-node.default['docker-registry'][:gunicorn][:workers] = 8
-node.default['docker-registry'][:gunicorn][:worker_class] = 'gevent'
-node.default['docker-registry'][:gunicorn][:max_requests] = 100
-node.default['docker-registry'][:gunicorn][:timeout] = 3600
-node.default['docker-registry'][:gunicorn][:log_file] = '-'
-node.default['docker-registry'][:gunicorn][:log_level] = :info
-node.default['docker-registry'][:gunicorn][:debug] = false
-node.default['docker-registry'][:gunicorn][:trace] = false
-
-node.default['docker-registry'][:nginx][:server_name] = 'localhost'
-node.default['docker-registry'][:nginx][:port] = 8080
-node.default['docker-registry'][:nginx][:hosts] = [(node['ipaddress'] || '127.0.0.1')]
-node.default['docker-registry'][:nginx][:owner] = node['docker-registry'][:application][:owner]
-node.default['docker-registry'][:nginx][:group] = node['docker-registry'][:application][:group]
-node.default['docker-registry'][:nginx][:local_server] = true
-node.default['docker-registry'][:nginx][:application_socket] = nil
-node.default['docker-registry'][:nginx][:ssl] = false
-node.default['docker-registry'][:nginx][:ssl_path] = '/etc/ssl'
-node.default['docker-registry'][:nginx][:certificate_path] = nil
-node.default['docker-registry'][:nginx][:certificate_key_path] = nil
-node.default['docker-registry'][:nginx][:set_host_header] = true
+node.default[:docker_registry][:nginx][:server_name] = 'localhost'
+node.default[:docker_registry][:nginx][:port] = 8080
+node.default[:docker_registry][:nginx][:hosts] = [(node['ipaddress'] || '127.0.0.1')]
+node.default[:docker_registry][:nginx][:owner] = node[:docker_registry][:application][:owner]
+node.default[:docker_registry][:nginx][:group] = node[:docker_registry][:application][:group]
+node.default[:docker_registry][:nginx][:local_server] = true
+node.default[:docker_registry][:nginx][:application_socket] = nil
+node.default[:docker_registry][:nginx][:ssl] = false
+node.default[:docker_registry][:nginx][:ssl_path] = '/etc/ssl'
+node.default[:docker_registry][:nginx][:certificate_path] = nil
+node.default[:docker_registry][:nginx][:certificate_key_path] = nil
+node.default[:docker_registry][:nginx][:set_host_header] = true
 
