@@ -22,14 +22,13 @@ include_recipe 'docker::default'
 
 group node[:docker_registry][:group] do
     action :create
-    #only_if "! egrep -i \"^#{node[:docker_registry][:group]}\" /etc/group"
 end
 
 user node[:docker_registry][:user] do
     gid node[:docker_registry][:group]
     home node[:docker_registry][:path]
     shell '/bin/bash'
-    #only_if "! getent passwd #{node[:docker_registry][:user]} 2>&1 > /dev/null"
+    action :create
 end
 
 directory node[:docker_registry][:path] do
@@ -40,17 +39,8 @@ directory node[:docker_registry][:path] do
     action :create
 end
 
-# clone the docker-registry source
-git "#{node[:docker_registry][:path]}/docker-registry" do
-    repository node[:docker_registry][:registry_git_url]
-    reference node[:docker_registry][:registry_git_ref]
-    user node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    action :sync
-end
-
 if node[:docker_registry][:storage] == 'local'
-    directory "#{node[:docker_registry][:path]}/docker-registry/storage" do
+    directory node[:docker_registry][:storage_path] do
         owner node[:docker_registry][:user]
         group node[:docker_registry][:group]
         recursive true
@@ -65,15 +55,7 @@ data_bag = DockerRegistry.decrypt_data_bag(
     ::Chef::Config[:encrypted_data_bag_secret]
 )
 
-directory "#{node[:docker_registry][:path]}/docker-registry/config" do
-    owner node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    recursive true
-    mode 0776
-    action :create
-end
-
-template "#{node[:docker_registry][:path]}/docker-registry/config/config.yml" do
+template "#{node[:docker_registry][:path]}/config.yml" do
     source 'registry_config.yml.erb'
     mode 0440
     owner node[:docker_registry][:user]
@@ -100,14 +82,14 @@ docker_container node[:docker_registry][:name] do
     image node[:docker_registry][:container_image]
     tag node[:docker_registry][:container_tag]
     user node[:docker_registry][:user]
-    detach true
-    publish_exposed_ports true
-    tty true
-    hostname (node['hostname'] || node['fqdn'])
-    port "#{node[:docker_registry][:port]}:#{node[:docker_registry][:port]}"
+    detach node[:docker_registry][:detach]
+    publish_exposed_ports node[:docker_registry][:publish_exposed_ports]
+    tty node[:docker_registry][:tty]
+    hostname node[:docker_registry][:hostname]
+    port node[:docker_registry][:ports]
     env node[:docker_registry][:env_vars]
-    volume "#{::File.expand_path(node[:docker_registry][:path])}/docker-registry:/docker-registry"
+    volume node[:docker_registry][:volumes]
+    init_type node[:docker_registry][:init_type]
+    init_template node[:docker_registry][:init_template]
     action :run
 end
-
-

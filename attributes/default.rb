@@ -35,7 +35,7 @@ end
 
 case storage
     when 'local'
-        storage_path = "#{node[:docker_registry][:path]}/docker-registry/storage/#{flavor}"
+        storage_path = "#{node[:docker_registry][:path]}/storage/#{flavor}"
     else
         storage_path = "registry/#{flavor}"
 end
@@ -43,13 +43,21 @@ end
 node.default[:docker_registry][:name] = 'docker_registry'
 node.default[:docker_registry][:user] = 'docker_registry'
 node.default[:docker_registry][:group] = 'docker_registry'
+
 node.default[:docker_registry][:path] = "/opt/#{node[:docker_registry][:name]}"
 node.default[:docker_registry][:registry_git_url] = 'https://github.com/dotcloud/docker-registry.git'
 node.default[:docker_registry][:registry_git_ref] = 'master'
 node.default[:docker_registry][:container_image] = 'samalba/docker-registry'
 node.default[:docker_registry][:container_tag] = '0.1'
-node.default[:docker_registry][:port] = 5000
-node.default[:docker_registry][:env_vars] = ["DOCKER_REGISTRY_CONFIG=#{node[:docker_registry][:path]}/config.yml"]
+node.default[:docker_registry][:ports] = ['5000:5000']
+node.default[:docker_registry][:volumes] = ["#{node[:docker_registry][:path]}:/mnt/#{node[:docker_registry][:name]}"]
+node.default[:docker_registry][:hostname] = node['hostname'] || node['fqdn'] || nil
+node.default[:docker_registry][:detach] = true
+node.default[:docker_registry][:tty] = false
+node.default[:docker_registry][:publish_exposed_ports] = true
+node.default[:docker_registry][:init_type] = 'upstart'
+node.default[:docker_registry][:init_template] = 'docker-container.conf.erb'
+node.default[:docker_registry][:env_vars] = ["DOCKER_REGISTRY_CONFIG=/mnt/#{node[:docker_registry][:name]}/config.yml"]
 node.default[:docker_registry][:index_url] = 'https://index.docker.io'
 node.default[:docker_registry][:registry_url] = node[:docker_registry][:nginx][:server_name]
 
