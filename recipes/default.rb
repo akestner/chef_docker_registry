@@ -50,6 +50,13 @@ directory node['docker-registry'][:storage_path] do
     action :create
 end
 
+unless ENV['USER'] == node['docker-registry'][:application][:owner]
+    execute 'app_owner_shell' do
+        command "su #{node['docker-registry'][:application][:owner]} -l"
+        action :run
+    end
+end
+
 if node['docker-registry'][:gunicorn][:virtualenv_name]
     virtualenv_name = node['docker-registry'][:gunicorn][:virtualenv_name]
 else
@@ -174,4 +181,11 @@ application "#{node['docker-registry'][:application][:name]}" do
     end
 
     action :force_deploy
+end
+
+unless ENV['USER'] == node['docker-registry'][:application][:owner]
+    execute 'exit_app_owner_shell' do
+        command 'exit'
+        action :run
+    end
 end
