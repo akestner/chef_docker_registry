@@ -1,0 +1,55 @@
+# The `common' part is automatically included (and possibly overridden by all
+# other flavors)
+common:
+    # Bucket for storage
+    boto_bucket: <%= @s3_bucket %>
+
+    storage: <%= @storage %>
+    storage_path: <%= @storage_path %>
+
+    # Amazon S3 Storage Configuration
+    <% if @storage == "s3" -%>
+    s3_access_key: <%= @s3_access_key_id %>
+    s3_secret_key: <%= @s3_secret_access_key %>
+    s3_bucket: <%= @s3_bucket %>
+    s3_encrypt: <%= @s3_encrypt %>
+    s3_secure: <%= @s3_secure %>
+    <% end %>
+
+    # Set a random string here
+    secret_key: <%= @secret_key %>
+
+    standalone: <%= @standalone %>
+    <% unless @standalone %>
+    index_endpoint: <%= @index_endpoint %>
+    <% end %>
+
+# This is the default configuration when no flavor is specified
+dev:
+    loglevel: debug
+
+prod:
+    # @TODO
+    #
+    # Enabling LRU cache for small files. This speeds up read/write on small files
+    # when using a remote storage backend (like S3).
+    #cache:
+    #    host: _env:CACHE_REDIS_HOST
+    #    port: _env:CACHE_REDIS_PORT
+    #    password: _env:CACHE_REDIS_PASSWORD
+    #cache_lru:
+    #    host: _env:CACHE_LRU_REDIS_HOST
+    #    port: _env:CACHE_LRU_REDIS_PORT
+    #    password: _env:CACHE_LRU_REDIS_PASSWORD
+    # Enabling these options makes the Registry send an email on each code Exception
+    #email_exceptions:
+    #    smtp_host: REPLACEME
+    #    smtp_port: 25
+    #    smtp_login: REPLACEME
+    #    smtp_password: REPLACEME
+    #    smtp_secure: false
+    #    from_addr: docker-registry@localdomain.local
+    #    to_addr: noise+dockerregistry@localdomain.local
+    # Enable bugsnag (set the API key)
+    #bugsnag: REPLACEME
+
