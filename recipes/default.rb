@@ -50,13 +50,6 @@ directory node['docker-registry'][:storage_path] do
     action :create
 end
 
-unless ENV['USER'] == node['docker-registry'][:application][:owner]
-    execute 'app_owner_shell' do
-        command "su #{node['docker-registry'][:application][:owner]} -l"
-        action :run
-    end
-end
-
 if node['docker-registry'][:gunicorn][:virtualenv_name]
     virtualenv_name = node['docker-registry'][:gunicorn][:virtualenv_name]
 else
@@ -153,39 +146,30 @@ application "#{node['docker-registry'][:application][:name]}" do
     nginx_load_balancer do
         only_if { node['roles'].include? node['docker-registry'][:application][:load_balancer_role] }
 
-        if node['docker-registry'][:nginx][:application_socket]
-            application_socket node['docker-registry'][:nginx][:application_socket]
-        else
-            hosts node['docker-registry'][:nginx][:hosts]
-            application_port node['docker-registry'][:gunicorn][:internal_port]
-        end
-
         application_server_role node['docker-registry'][:application][:server_role]
         server_name node['docker-registry'][:nginx][:server_name]
         port node['docker-registry'][:nginx][:port]
-        set_host_header node['docker-registry'][:nginx][:set_host_header]
         ssl node['docker-registry'][:nginx][:ssl]
+        set_host_header node['docker-registry'][:nginx][:set_host_header]
+        template 'nginx_load_balancer.conf.erb'
 
-        template 'docker-registry_nginx.conf.erb'
+        if node['docker-registry'][:nginx][:application_socket]
+            application_socket node['docker-registry'][:nginx][:application_socket]
+        else
+            hosts (node['docker-registry'][:nginx][:local_server] ? ['127.0.0.1'] : node['docker-registry'][:nginx][:hosts])
+            application_port node['docker-registry'][:gunicorn][:internal_port]
+        end
+
         if node['docker-registry'][:nginx][:ssl]
             certificate = DockerRegistry.ssl_certificate(
                 node['docker-registry'][:data_bag],
                 node['docker-registry'][:data_bag_item],
                 Chef::Config[:encrypted_data_bag_secret]
             )
-            variables({
-                :ssl_certificate => certificate[:path],
-                :ssl_certificate_key => certificate[:key_path]
-            })
+            ssl_certificate certificate[:path]
+            ssl_certificate_key certificate[:key_path]
         end
     end
 
     action :force_deploy
-end
-
-unless ENV['USER'] == node['docker-registry'][:application][:owner]
-    execute 'exit_app_owner_shell' do
-        command 'exit'
-        action :run
-    end
 end
