@@ -37,7 +37,7 @@ node.default['docker-registry'][:application][:install_dir] = '/opt/docker-regis
 node.default['docker-registry'][:application][:deploy_key] = nil
 node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
 node.default['docker-registry'][:application][:revision] = '0.6.5'
-node.default['docker-registry'][:application][:packages] = ['libevent-dev']
+node.default['docker-registry'][:application][:packages] = ['build-essential', 'python-dev', 'libevent-dev', 'python-pip', 'libssl-dev', 'liblzma-dev'] # taken from dotcloud/docker-registry install instructions
 node.default['docker-registry'][:application][:server_role] = "#{node['docker-registry'][:application][:name]}_application_python"
 node.default['docker-registry'][:application][:load_balancer_role] = "#{node['docker-registry'][:application][:name]}_application_nginx"
 
