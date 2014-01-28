@@ -119,12 +119,15 @@ application "#{node['docker-registry'][:application][:name]}" do
                 :s3_access_key_id => data_bag[:s3_access_key_id],
                 :s3_secret_access_key => data_bag[:s3_secret_access_key],
                 :s3_bucket => node['docker-registry'][:s3_bucket],
+                :s3_encrypt => node['docker-registry'][:s3_encrypt],
+                :s3_secure => node['docker-registry'][:s3_secure]
             })
         end
     end
 
     gunicorn do
         only_if { node['roles'].include? node['docker-registry'][:application][:server_role] }
+
         max_requests node['docker-registry'][:gunicorn][:max_requests]
         timeout node['docker-registry'][:gunicorn][:timeout]
         port node['docker-registry'][:gunicorn][:internal_port]
@@ -142,7 +145,6 @@ application "#{node['docker-registry'][:application][:name]}" do
 
     nginx_load_balancer do
         only_if { node['roles'].include? node['docker-registry'][:application][:load_balancer_role] }
-        application_server_role node['docker-registry'][:application][:server_role]
 
         if node['docker-registry'][:nginx][:application_socket]
             application_socket node['docker-registry'][:nginx][:application_socket]
@@ -151,6 +153,7 @@ application "#{node['docker-registry'][:application][:name]}" do
             application_port node['docker-registry'][:gunicorn][:internal_port]
         end
 
+        application_server_role node['docker-registry'][:application][:server_role]
         server_name node['docker-registry'][:nginx][:server_name]
         port node['docker-registry'][:nginx][:port]
         set_host_header node['docker-registry'][:nginx][:set_host_header]

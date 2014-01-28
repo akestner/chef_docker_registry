@@ -25,6 +25,8 @@ node.default['docker-registry'][:storage_path] = "registry/#{(node.chef_environm
 node.default['docker-registry'][:secret_key] = nil
 node.default['docker-registry'][:s3_access_key_id] = nil
 node.default['docker-registry'][:s3_secret_access_key] = nil
+node.default['docker-registry'][:s3_encrypt] = true
+node.default['docker-registry'][:s3_secure] = true
 node.default['docker-registry'][:standalone] = true
 node.default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
 
