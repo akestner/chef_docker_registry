@@ -1,6 +1,6 @@
 # VERSION           0.0.1
 # DOCKER-VERSION    0.7.3
-# AUTHOR:           Alex Kestner <akestner@healthguru.com>
+# AUTHOR:           Alex Kestner, akestner@healthguru.com
 # DESCRIPTION:      Image with docker-registry project and dependecies
 # TO_BUILD:         docker build -rm -t docker_registry .
 # TO_RUN:           docker run -p 5000:5000 docker_registry
@@ -17,6 +17,6 @@ ADD ./config/boto.cfg /etc/boto.cfg
 
 RUN cd /docker-registry && pip install -r requirements.txt
 
-EXPOSE 5000
+EXPOSE <%= @port %>
 
 CMD cd /docker-registry && ./run.sh
