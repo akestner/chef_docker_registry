@@ -32,6 +32,7 @@ node.default['docker-registry'][:application][:name] = 'docker-registry'
 node.default['docker-registry'][:application][:owner] = 'docker-registry'
 node.default['docker-registry'][:application][:group] = 'docker-registry'
 node.default['docker-registry'][:application][:install_dir] = '/opt/docker-registry'
+node.default['docker-registry'][:application][:deploy_key] = nil
 node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
 node.default['docker-registry'][:application][:revision] = '0.6.5'
 node.default['docker-registry'][:application][:packages] = ['libevent-dev']
