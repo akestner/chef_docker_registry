@@ -94,6 +94,7 @@ application "#{node['docker-registry'][:application][:name]}" do
     repository node['docker-registry'][:application][:repository]
     revision node['docker-registry'][:application][:revision]
     packages node['docker-registry'][:application][:packages]
+    deploy_key nil
 
     symlinks 'config.yml' => 'config.yml'
 
@@ -162,9 +163,4 @@ application "#{node['docker-registry'][:application][:name]}" do
     end
 
     action :force_deploy
-end
-
-begin
-  rescue NameError
-  raise "#{node.to_json}"
 end

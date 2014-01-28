@@ -28,14 +28,12 @@ node.default['docker-registry'][:s3_secret_access_key] = nil
 node.default['docker-registry'][:standalone] = true
 node.default['docker-registry'][:index_endpoint] = 'https://index.docker.io'
 
-
-node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
-node.default['docker-registry'][:application][:revision] = '0.6.5'
+node.default['docker-registry'][:application][:name] = 'docker-registry'
 node.default['docker-registry'][:application][:owner] = 'docker-registry'
 node.default['docker-registry'][:application][:group] = 'docker-registry'
 node.default['docker-registry'][:application][:install_dir] = '/opt/docker-registry'
-
-node.default['docker-registry'][:application][:name] = 'docker-registry'
+node.default['docker-registry'][:application][:repository] = 'https://github.com/dotcloud/docker-registry.git'
+node.default['docker-registry'][:application][:revision] = '0.6.5'
 node.default['docker-registry'][:application][:packages] = ['libevent-dev']
 node.default['docker-registry'][:application][:server_role] = "#{node['docker-registry'][:application][:name]}_application_python"
 node.default['docker-registry'][:application][:load_balancer_role] = "#{node['docker-registry'][:application][:name]}_application_nginx"
