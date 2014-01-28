@@ -20,23 +20,23 @@
 
 include_recipe 'docker::default'
 
-group node[:docker_registry][:group] do
-    action :create
-end
+unless node[:docker_registry][:user] == 'root'
+    group node[:docker_registry][:group] do
+        action :create
+    end
 
-user node[:docker_registry][:user] do
-    gid node[:docker_registry][:group]
-    home node[:docker_registry][:path]
-    shell '/bin/bash'
-    action :create
-end
+    user node[:docker_registry][:user] do
+        gid node[:docker_registry][:group]
+        home "/home/#{node[:docker_registry][:user]}"
+        shell '/bin/bash -l'
+        action :create
+    end
 
-directory node[:docker_registry][:path] do
-    owner node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    recursive true
-    mode 0776
-    action :create
+    group 'sudo' do
+        members node[:docker_registry][:user]
+        append true
+        action :modify
+    end
 end
 
 if node[:docker_registry][:storage] == 'local'
@@ -49,13 +49,21 @@ if node[:docker_registry][:storage] == 'local'
     end
 end
 
+git node[:docker_registry][:path] do
+    repository node[:docker_registry][:registry_git_url]
+    reference node[:docker_registry][:registry_git_ref]
+    user node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    action :sync
+end
+
 data_bag = DockerRegistry.decrypt_data_bag(
     node[:docker_registry][:data_bag],
     node[:docker_registry][:data_bag_item],
     ::Chef::Config[:encrypted_data_bag_secret]
 )
 
-template "#{node[:docker_registry][:path]}/config.yml" do
+template "#{node[:docker_registry][:path]}/config/config.yml" do
     source 'registry_config.yml.erb'
     mode 0440
     owner node[:docker_registry][:user]
@@ -74,10 +82,32 @@ template "#{node[:docker_registry][:path]}/config.yml" do
     })
 end
 
-# pull the latest image
-docker_image node[:docker_registry][:container_image]
+template "#{node[:docker_registry][:path]}/Dockerfile" do
+    source 'Dockerfile.erb'
+    mode 0755
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    variables({
+    })
+end
 
-# run container, exposing ports
+# build our image
+docker_image node[:docker_registry][:name] do
+    source node[:docker_registry][:path]
+    tag node[:docker_registry][:name]
+    rm true
+    action :build
+end
+
+export_path = ::File.join(node[:docker_registry][:path], '..', "#{node[:docker_registry][:name]}.tgz").to_s
+
+# export it to a tarball for a moment
+docker_image node[:docker_registry][:name] do
+    destination export_path
+    action :save
+end
+
+# run the registry container (our new private repo)
 docker_container node[:docker_registry][:name] do
     image node[:docker_registry][:container_image]
     tag node[:docker_registry][:container_tag]
@@ -92,4 +122,16 @@ docker_container node[:docker_registry][:name] do
     init_type node[:docker_registry][:init_type]
     init_template node[:docker_registry][:init_template]
     action :run
+end
+
+# import the tarball we exported earlier
+docker_image node[:docker_registry][:name] do
+    source export_path
+    action :import
+end
+
+# tag our image into the new repo
+docker_image node[:docker_registry][:name] do
+    registry "#{node[:docker_registry][:registry_url]}:5000/"
+    tag '0.0.1'
 end

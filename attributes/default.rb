@@ -22,15 +22,12 @@
 include_attribute 'docker::default'
 
 case node.chef_environment.to_s
-    when 'default', 'development', 'dev'
-        flavor = 'dev'
-        storage = 'local'
     when 'production', 'prod'
         flavor = 'prod'
-        storage = 's3'
+        storage = node[:docker_registry][:storage] || 's3'
     else
-        flavor = 'common'
-        storage = 'local'
+        flavor = 'dev'
+        storage = node[:docker_registry][:storage] || 'local'
 end
 
 case storage
@@ -40,49 +37,55 @@ case storage
         storage_path = "registry/#{flavor}"
 end
 
-node.default[:docker_registry][:name] = 'docker_registry'
-node.default[:docker_registry][:user] = 'docker_registry'
-node.default[:docker_registry][:group] = 'docker_registry'
+default[:docker_registry][:name] = 'docker_registry'
+default[:docker_registry][:user] = 'docker_registry'
+default[:docker_registry][:group] = 'docker_registry'
 
-node.default[:docker_registry][:path] = "/opt/#{node[:docker_registry][:name]}"
-node.default[:docker_registry][:registry_git_url] = 'https://github.com/dotcloud/docker-registry.git'
-node.default[:docker_registry][:registry_git_ref] = 'master'
-node.default[:docker_registry][:container_image] = 'samalba/docker-registry'
-node.default[:docker_registry][:container_tag] = '0.1'
-node.default[:docker_registry][:ports] = ['5000:5000']
-node.default[:docker_registry][:volumes] = ["#{node[:docker_registry][:path]}:/mnt/#{node[:docker_registry][:name]}"]
-node.default[:docker_registry][:hostname] = node['hostname'] || node['fqdn'] || nil
-node.default[:docker_registry][:detach] = true
-node.default[:docker_registry][:tty] = false
-node.default[:docker_registry][:publish_exposed_ports] = true
-node.default[:docker_registry][:init_type] = 'upstart'
-node.default[:docker_registry][:init_template] = 'docker-container.conf.erb'
-node.default[:docker_registry][:env_vars] = ["DOCKER_REGISTRY_CONFIG=/mnt/#{node[:docker_registry][:name]}/config.yml"]
-node.default[:docker_registry][:index_url] = 'https://index.docker.io'
-node.default[:docker_registry][:registry_url] = node[:docker_registry][:nginx][:server_name]
+default[:docker_registry][:path] = "/opt/#{node[:docker_registry][:name]}"
+default[:docker_registry][:registry_git_url] = 'https://github.com/dotcloud/docker-registry.git'
+default[:docker_registry][:registry_git_ref] = 'master'
+default[:docker_registry][:container_image] = 'samalba/docker-registry'
+default[:docker_registry][:container_tag] = '0.1'
+default[:docker_registry][:port_mapping] = {'5000' => '5000', '80' => '80'}
+default[:docker_registry][:ports] = [node[:docker_registry][:port_mapping].map { |host, container| "#{host}:#{container}" }]
 
-node.default[:docker_registry][:data_bag] = node[:docker_registry][:name]
-node.default[:docker_registry][:data_bag_item] = 'auth'
+puts node[:docker_registry][:ports]
 
-node.default[:docker_registry][:flavor] = flavor
-node.default[:docker_registry][:storage] = storage
-node.default[:docker_registry][:storage_path] = storage_path
-node.default[:docker_registry][:secret_key] = nil
-node.default[:docker_registry][:s3_access_key_id] = nil
-node.default[:docker_registry][:s3_secret_access_key] = nil
-node.default[:docker_registry][:s3_encrypt] = true
-node.default[:docker_registry][:s3_secure] = true
+default[:docker_registry][:volumes] = ["#{node[:docker_registry][:path]}:/docker-registry"]
+default[:docker_registry][:hostname] = node['hostname'] || node['fqdn'] || nil
+default[:docker_registry][:detach] = true
+default[:docker_registry][:tty] = false
+default[:docker_registry][:publish_exposed_ports] = true
+default[:docker_registry][:standalone] = true
+default[:docker_registry][:init_type] = 'upstart'
+default[:docker_registry][:init_template] = 'docker-container.conf.erb'
+default[:docker_registry][:env_vars] = ["DOCKER_REGISTRY_CONFIG=/docker-registry/config/config.yml"]
+default[:docker_registry][:index_url] = 'https://index.docker.io'
+default[:docker_registry][:registry_url] = 'localhost'
+default[:docker_registry][:registry_port] = 5000
 
-node.default[:docker_registry][:nginx][:server_name] = 'localhost'
-node.default[:docker_registry][:nginx][:port] = 80
-node.default[:docker_registry][:nginx][:hosts] = [(node['ipaddress'] || '127.0.0.1')]
-node.default[:docker_registry][:nginx][:owner] = node[:docker_registry][:user]
-node.default[:docker_registry][:nginx][:group] = node[:docker_registry][:group]
-node.default[:docker_registry][:nginx][:local_server] = true
-node.default[:docker_registry][:nginx][:application_socket] = nil
-node.default[:docker_registry][:nginx][:ssl] = false
-node.default[:docker_registry][:nginx][:ssl_path] = '/etc/ssl'
-node.default[:docker_registry][:nginx][:certificate_path] = nil
-node.default[:docker_registry][:nginx][:certificate_key_path] = nil
-node.default[:docker_registry][:nginx][:set_host_header] = true
+default[:docker_registry][:data_bag] = node[:docker_registry][:name]
+default[:docker_registry][:data_bag_item] = 'auth'
+
+default[:docker_registry][:flavor] = flavor
+default[:docker_registry][:storage] = storage
+default[:docker_registry][:storage_path] = storage_path
+default[:docker_registry][:secret_key] = nil
+default[:docker_registry][:s3_access_key_id] = nil
+default[:docker_registry][:s3_secret_access_key] = nil
+default[:docker_registry][:s3_encrypt] = true
+default[:docker_registry][:s3_secure] = true
+
+default[:docker_registry][:nginx][:server_name] = 'localhost'
+default[:docker_registry][:nginx][:port] = 80
+default[:docker_registry][:nginx][:hosts] = [(node['ipaddress'] || '127.0.0.1')]
+default[:docker_registry][:nginx][:owner] = node[:docker_registry][:user]
+default[:docker_registry][:nginx][:group] = node[:docker_registry][:group]
+default[:docker_registry][:nginx][:local_server] = true
+default[:docker_registry][:nginx][:application_socket] = nil
+default[:docker_registry][:nginx][:ssl] = false
+default[:docker_registry][:nginx][:ssl_path] = '/etc/ssl'
+default[:docker_registry][:nginx][:certificate_path] = nil
+default[:docker_registry][:nginx][:certificate_key_path] = nil
+default[:docker_registry][:nginx][:set_host_header] = true
 
