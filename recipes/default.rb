@@ -29,12 +29,12 @@ end
 
 user node['docker-registry'][:application][:owner] do
     gid node['docker-registry'][:application][:group]
-    home node['docker-registry'][:application][:install_dir]
+    home node['docker-registry'][:application][:path]
     shell '/bin/bash'
     only_if "! getent passwd #{node['docker-registry'][:application][:owner]} 2>&1 > /dev/null"
 end
 
-directory node['docker-registry'][:application][:install_dir] do
+directory node['docker-registry'][:application][:path] do
     owner node['docker-registry'][:application][:owner]
     group node['docker-registry'][:application][:group]
     recursive true
@@ -50,35 +50,8 @@ directory node['docker-registry'][:storage_path] do
     action :create
 end
 
-if node['docker-registry'][:gunicorn][:virtualenv_name]
-    virtualenv_name = node['docker-registry'][:gunicorn][:virtualenv_name]
-else
-    virtualenv_name = node['docker-registry'][:application][:name]
-end
-
-if ::ENV['WORKON_HOME']
-    virtualenv_path = File.expand_path(
-        ::File.join(::ENV['WORKON_HOME'], virtualenv_name)
-    ).to_s
-else
-    virtualenv_path = File.expand_path(
-        ::File.join(::ENV['HOME'], '.virtualenvs', virtualenv_name)
-    ).to_s
-end
-
 # make sure virtualenv has a place to work
-directory virtualenv_path do
-    owner node['docker-registry'][:application][:owner]
-    group node['docker-registry'][:application][:group]
-    recursive true
-    mode 0777
-    action :create
-end
-
-gunicorn_working_dir = File.expand_path(node['docker-registry'][:gunicorn][:working_dir]).to_s
-
-# make sure gunicorn has a place to work
-directory gunicorn_working_dir do
+directory node['docker-registry'][:gunicorn][:virtualenv] do
     owner node['docker-registry'][:application][:owner]
     group node['docker-registry'][:application][:group]
     recursive true
@@ -90,7 +63,7 @@ application "#{node['docker-registry'][:application][:name]}" do
     name node['docker-registry'][:application][:name]
     owner node['docker-registry'][:application][:owner]
     group node['docker-registry'][:application][:group]
-    path node['docker-registry'][:application][:install_dir]
+    path node['docker-registry'][:application][:path]
     repository node['docker-registry'][:application][:repository]
     revision node['docker-registry'][:application][:revision]
     packages node['docker-registry'][:application][:packages]
@@ -138,9 +111,8 @@ application "#{node['docker-registry'][:application][:name]}" do
         debug (node['docker-registry'][:gunicorn][:debug])
         trace (node['docker-registry'][:gunicorn][:trace])
         app_module node['docker-registry'][:gunicorn][:app_module]
-        virtualenv virtualenv_path
+        virtualenv node['docker-registry'][:gunicorn][:virtualenv]
         environment :SETTINGS_FLAVOR => node['docker-registry'][:gunicorn][:flavor]
-        directory gunicorn_working_dir
     end
 
     nginx_load_balancer do
