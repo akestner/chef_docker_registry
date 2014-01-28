@@ -56,7 +56,7 @@ node.default['docker-registry'][:gunicorn][:trace] = false
 
 node.default['docker-registry'][:nginx][:server_name] = 'localhost'
 node.default['docker-registry'][:nginx][:port] = 8080
-node.default['docker-registry'][:nginx][:hosts] = ['127.0.0.1']
+node.default['docker-registry'][:nginx][:hosts] = [(node['ipaddress'] || '127.0.0.1')]
 node.default['docker-registry'][:nginx][:application_socket] = nil
 node.default['docker-registry'][:nginx][:ssl] = false
 node.default['docker-registry'][:nginx][:ssl_path] = '/etc/ssl'
