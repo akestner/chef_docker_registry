@@ -142,13 +142,21 @@ application "#{node['docker-registry'][:application][:name]}" do
 
     nginx_load_balancer do
         only_if { node['roles'].include? node['docker-registry'][:application][:load_balancer_role] }
-        application_port node['docker-registry'][:gunicorn][:internal_port]
         application_server_role node['docker-registry'][:application][:server_role]
+
+        if node['docker-registry'][:nginx][:application_socket]
+            application_socket node['docker-registry'][:nginx][:application_socket]
+        else
+            hosts node['docker-registry'][:nginx][:hosts]
+            application_port node['docker-registry'][:gunicorn][:internal_port]
+        end
+
         server_name node['docker-registry'][:nginx][:server_name]
+        port node['docker-registry'][:nginx][:port]
         set_host_header node['docker-registry'][:nginx][:set_host_header]
         ssl node['docker-registry'][:nginx][:ssl]
 
-        template "#{node['docker-registry'][:application][:name]}_nginx.conf.erb"
+        template 'docker-registry_nginx.conf.erb'
         if node['docker-registry'][:nginx][:ssl]
             certificate = DockerRegistry.ssl_certificate(
                 node['docker-registry'][:data_bag],

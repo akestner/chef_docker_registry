@@ -51,7 +51,10 @@ node.default['docker-registry'][:gunicorn][:log_level] = :info
 node.default['docker-registry'][:gunicorn][:debug] = false
 node.default['docker-registry'][:gunicorn][:trace] = false
 
-node.default['docker-registry'][:nginx][:server_name] = nil # ie. must be set by user
+node.default['docker-registry'][:nginx][:server_name] = 'localhost'
+node.default['docker-registry'][:nginx][:port] = 8080
+node.default['docker-registry'][:nginx][:hosts] = ['127.0.0.1']
+node.default['docker-registry'][:nginx][:application_socket] =
 node.default['docker-registry'][:nginx][:ssl] = false
 node.default['docker-registry'][:nginx][:ssl_path] = '/etc/ssl'
 node.default['docker-registry'][:nginx][:certificate_path] = nil
