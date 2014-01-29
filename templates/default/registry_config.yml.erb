@@ -1,5 +1,5 @@
-# The `common' part is automatically included (and possibly overridden by all
-# other flavors)
+# The common part is automatically included
+# (and possibly overridden by all other flavors)
 common:
     # Bucket for storage
     boto_bucket: <%= @s3_bucket %>
@@ -19,6 +19,11 @@ common:
     # Set a random string here
     secret_key: <%= @secret_key %>
 
+    <% unless @privileged_key_public.empty? %>
+    # privileged_key_public
+    privileged_key: <%= @privileged_key_public %>
+    <% end %>
+
     standalone: <%= @standalone %>
     <% unless @standalone %>
     index_endpoint: <%= @index_url %>
@@ -29,6 +34,7 @@ dev:
     loglevel: debug
 
 prod:
+    loglevel: error
     # @TODO
     #
     # Enabling LRU cache for small files. This speeds up read/write on small files

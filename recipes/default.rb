@@ -21,7 +21,7 @@
 include_recipe 'docker::default'
 
 # setup users/groups, permissions
-unless node[:docker_registry][:user] == 'root'
+if node[:docker_registry][:user] != 'root'
     group node[:docker_registry][:group] do
         action :create
     end
@@ -38,6 +38,10 @@ unless node[:docker_registry][:user] == 'root'
         append true
         action :modify
     end
+
+    public_key_dir = "/home/#{node[:docker_registry][:user]}/.ssh"
+else
+    public_key_dir = ::File.join(node[:docker_registry][:user], '.ssh').to_s
 end
 
 # make sure local storage path is created
@@ -48,13 +52,33 @@ if node[:docker_registry][:storage] == 'local'
         recursive true
         mode 0776
         action :create
+        not_if { ::File.directory?(dir) }
     end
+end
+
+directory node[:docker_registry][:nginx][:config_dir] do
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    recursive true
+    mode 0755
+    action :create
+    not_if { ::File.directory?(node[:docker_registry][:nginx][:config_dir]) }
+end
+
+path_parent_dir = ::File.dirname(node[:docker_registry][:path]).to_s
+directory path_parent_dir do
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    recursive true
+    mode 0766
+    action :create
+    not_if { ::File.directory?(path_parent_dir) }
 end
 
 # clone dotcloud/docker-registry source
 git node[:docker_registry][:path] do
-    repository node[:docker_registry][:registry_git_url]
-    reference node[:docker_registry][:registry_git_ref]
+    repository node[:docker_registry][:git_source_url]
+    reference node[:docker_registry][:git_source_ref]
     user node[:docker_registry][:user]
     group node[:docker_registry][:group]
     action :sync
@@ -67,6 +91,39 @@ data_bag = DockerRegistry.decrypt_data_bag(
     ::Chef::Config[:encrypted_data_bag_secret]
 )
 
+# expand etc_nginx_passwd.erb template
+template node[:docker_registry][:nginx][:auth_users_file] do
+    source node[:docker_registry][:nginx][:auth_users_template]
+    mode 0755
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    variables({
+        :users => data_bag[:registry_users]
+    })
+end
+
+directory public_key_dir do
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    recursive true
+    mode 0700
+    action :create
+    not_if { ::File.directory?(public_key_dir) }
+end
+
+privileged_key_public = ::File.join(public_key_dir, 'healthguru.docker_registry.public.pem').to_s
+
+# template privileged_key_public
+template privileged_key_public do
+    source 'privileged_key_public.erb'
+    mode 0600
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    variables({
+        :privileged_key_public => data_bag[:privileged_key_public]
+    })
+end
+
 # expand docker-registry config.yaml template
 template "#{node[:docker_registry][:path]}/config/config.yml" do
     source 'registry_config.yml.erb'
@@ -75,6 +132,7 @@ template "#{node[:docker_registry][:path]}/config/config.yml" do
     group node[:docker_registry][:group]
     variables({
         :secret_key => data_bag[:secret_key],
+        #:privileged_key_public => privileged_key_public,
         :storage => node[:docker_registry][:storage],
         :storage_path => node[:docker_registry][:storage_path],
         :standalone => node[:docker_registry][:standalone],
@@ -87,29 +145,27 @@ template "#{node[:docker_registry][:path]}/config/config.yml" do
     })
 end
 
-if node[:docker_registry][:build_registry]
-    # 'template' Dockerfile, @TODO: parametrize Dockerfile template
-    template "#{node[:docker_registry][:path]}/Dockerfile" do
-        source node[:docker_registry][:dockerfile_template]
-        mode 0755
-        owner node[:docker_registry][:user]
-        group node[:docker_registry][:group]
-        variables({
-            :port => node[:docker_registry][:port]
-        })
-    end
+# expand Dockerfile.erb template
+template "#{node[:docker_registry][:path]}/Dockerfile" do
+    source node[:docker_registry][:dockerfile_template]
+    mode 0755
+    owner node[:docker_registry][:user]
+    group node[:docker_registry][:group]
+    variables({
+        :port => node[:docker_registry][:port]
+    })
+end
 
+if node[:docker_registry][:build_registry]
     # build our image
     docker_image node[:docker_registry][:name] do
         source node[:docker_registry][:path]
-        tag node[:docker_registry][:name]
         rm true
         action :build
     end
 
+    # export it to a tarball, just for a moment
     export_path = ::File.join(node[:docker_registry][:path], '..', "#{node[:docker_registry][:name]}.tgz").to_s
-
-    # export it to a tarball for a moment
     docker_image node[:docker_registry][:name] do
         destination export_path
         action :save
@@ -118,23 +174,18 @@ end
 
 # run our private docker registry,
 # either from existing private registry or from the container we just built
-docker_container node[:docker_registry][:name] do
-    image node[:docker_registry][:container_image]
-    tag node[:docker_registry][:container_tag]
+docker_container node[:docker_registry][:container_name] do
+    container_name node[:docker_registry][:name]
+    repository node[:docker_registry][:repository]
     user node[:docker_registry][:user]
-    port node[:docker_registry][:ports]
     hostname node[:docker_registry][:url]
 
     init_type node[:docker_registry][:init_type]
     init_template node[:docker_registry][:init_template]
-    socket_template node[:docker_registry][:socket_template]
 
+    port node[:docker_registry][:ports]
     env node[:docker_registry][:env_vars]
     volume node[:docker_registry][:volumes]
-
-    unless node[:docker_registry][:build_registry]
-        repository node[:docker_registry][:repository]
-    end
 
     detach node[:docker_registry][:detach]
     publish_exposed_ports node[:docker_registry][:publish_exposed_ports]
@@ -143,29 +194,39 @@ docker_container node[:docker_registry][:name] do
     action :run
 end
 
-# register/login to the private registry
-docker_registry node[:docker_registry][:repository] do
-    username data_bag[:registry_username]
-    password data_bag[:registry_password]
-    email data_bag[:registry_email]
-end
-
 if node[:docker_registry][:build_registry]
-    # import the tarball we exported earlier
+    # import our previously exported tarball
     docker_image node[:docker_registry][:name] do
+        repository node[:docker_registry][:repository]
         #noinspection RubyScope
         source export_path
         action :import
     end
 
+    # register with new registry
+    docker_registry node[:docker_registry][:registry] do
+        username 'healthguru'
+        password data_bag[:registry_users][:healthguru]
+        email 'accounts@healthguru.com'
+    end
+
     # tag our image into the new repo
+    bumped_version = node[:docker_registry][:container_tag].sub(/(\d+).(\d+).(\d+)/) { |match| "#{$1}.#{$2}.#{$3.to_i + 1}" }
     docker_image node[:docker_registry][:name] do
-        registry "#{node[:docker_registry][:url]}:#{node[:docker_registry][:port]}/"
-        tag '0.0.1'
+        registry node[:docker_registry][:registry]
+        tag bumped_version
+        action :tag
     end
 
     # push our image up to registry
     docker_image node[:docker_registry][:name] do
+        repository node[:docker_registry][:repository]
         action :push
+    end
+else
+    # login to the private registry
+    docker_registry node[:docker_registry][:registry] do
+        username 'healthguru'
+        password data_bag[:registry_users][:healthguru]
     end
 end

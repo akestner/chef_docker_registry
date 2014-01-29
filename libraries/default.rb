@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: docker-registry
+# Cookbook Name:: docker_registry
 # Library:: default
 # Author:: Alex Kestner <akestner@healthguru.com>
 #
@@ -21,8 +21,8 @@
 class Chef::Recipe::DockerRegistry
 
     def self.decrypt_data_bag(data_bag, data_bag_item, data_bag_secret)
-        data_bag ||= node['docker-registry'][:data_bag]
-        data_bag_item ||= node['docker-registry'][:data_bag_item] || node.chef_environment
+        data_bag ||= node[:docker_registry][:data_bag]
+        data_bag_item ||= node[:docker_registry][:data_bag_item] || node.chef_environment
 
         @data_bag_secret ||= Chef::EncryptedDataBagItem.load_secret(
             (data_bag_secret || Chef::Config[:encrypted_data_bag_secret])
@@ -32,7 +32,7 @@ class Chef::Recipe::DockerRegistry
     end
 
     def self.ssl_certificate(data_bag, data_bag_item, data_bag_secret)
-        if node['docker-registry'][:ssl]
+        if node[:docker_registry][:nginx][:ssl]
             unless @data_bag_item.nil?
                 @data_bag_secret ||= Chef::EncryptedDataBagItem.load_secret(
                     (data_bag_secret || Chef::Config[:encrypted_data_bag_secret])
@@ -42,7 +42,7 @@ class Chef::Recipe::DockerRegistry
 
             if !@data_bag_item[:ssl_certificate].nil? && !@data_bag_item[:ssl_certificate_key].nil?
 
-                certificate_path = ::File.join(node['docker-registry'][:ssl_path], 'certs', 'docker-registry.crt')
+                certificate_path = ::File.join(node[:docker_registry][:nginx][:ssl_path], 'certs', "#{node[:docker_registry][:name]}.crt")
 
                 template certificate_path do
                     source 'certificate.crt.erb'
@@ -60,7 +60,7 @@ class Chef::Recipe::DockerRegistry
                 end
 
                 certificate_key_path = ::File.join(
-                    node['docker-registry'][:ssl_path], 'private', 'docker-registry.key'
+                    node[:docker_registry][:nginx][:ssl_path], 'private', "#{node[:docker_registry][:name]}.key"
                 )
 
                 template certificate_key_path do
@@ -73,7 +73,7 @@ class Chef::Recipe::DockerRegistry
                     })
                 end
 
-                certificate = {path: certificate_path, key_path: certificate_key_path}
+                certificate = { :path => certificate_path, :key_path => certificate_key_path }
             end
         end
     end
