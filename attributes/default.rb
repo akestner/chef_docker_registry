@@ -39,11 +39,11 @@ end
 
 # core docker config
 default[:docker_registry][:name] = 'docker_registry'
-default[:docker_registry][:user] = 'docker_registry'
-default[:docker_registry][:group] = 'docker_registry'
+default[:docker_registry][:user] = 'docker'
+default[:docker_registry][:group] = 'docker'
 default[:docker_registry][:path] = "/opt/#{node[:docker_registry][:name]}"
 default[:docker_registry][:port] = 5000
-default[:docker_registry][:url] = node['hostname'] || node['fqdn'] || node[:docker_registry][:name]
+default[:docker_registry][:url] = node['hostname'] || node['fqdn']
 default[:docker_registry][:init_type] = 'upstart'
 default[:docker_registry][:init_template] = 'docker-container.conf.erb'
 default[:docker_registry][:bind_socket] = "/var/run/#{node[:docker_registry][:name]}.sock"
@@ -73,8 +73,8 @@ default[:docker_registry][:s3_encrypt] = true
 default[:docker_registry][:s3_secure] = true
 
 # docker container mappings -- ports, directories, environment vars
-default[:docker_registry][:ports] = { node[:docker_registry][:port].to_s => node[:docker_registry][:port].to_s }
-default[:docker_registry][:ports] = [node[:docker_registry][:ports].map { |host, container| "#{host}:#{container}" }]
+default[:docker_registry][:ports] = { "#{node[:docker_registry][:port]}" => "#{node[:docker_registry][:port]}" }
+default[:docker_registry][:ports] = node[:docker_registry][:ports].map { |host, container| "#{host}:#{container}" }
 default[:docker_registry][:volumes] = ["#{node[:docker_registry][:path]}:/docker-registry"]
 default[:docker_registry][:env_vars] = ["DOCKER_REGISTRY_CONFIG=/docker-registry/config/config.yml"]
 
@@ -96,12 +96,13 @@ default[:docker_registry][:nginx][:group] = node[:docker_registry][:group]
 upstream_host_var = "#{node[:docker_registry][:name].upcase}_PORT_#{node[:docker_registry][:port]}_TCP_ADDR"
 upstream_port_var = "#{node[:docker_registry][:name].upcase}_PORT_#{node[:docker_registry][:port]}_TCP_PORT"
 default[:docker_registry][:nginx][:upstream_host] = ENV[upstream_host_var] || node[:docker_registry][:url]
-default[:docker_registry][:nginx][:upstream_port] = ENV[upstream_port_var].to_i || node[:docker_registry][:port]
+default[:docker_registry][:nginx][:upstream_port] = ENV[upstream_port_var] || node[:docker_registry][:port]
 default[:docker_registry][:nginx][:upstream_socket] = node[:docker_registry][:bind_socket] || nil
 
 # nginx basic_auth & ssl config
 default[:docker_registry][:nginx][:auth_greeting] = 'HealthGuru\'s Docker Registry'
 default[:docker_registry][:nginx][:auth_users_file] = "/etc/nginx/#{node[:docker_registry][:name]}_passwd"
+default[:docker_registry][:nginx][:auth_users_template] = 'etc_nginx_passwd.erb'
 default[:docker_registry][:nginx][:ssl] = false
 default[:docker_registry][:nginx][:ssl_path] = '/etc/ssl'
 default[:docker_registry][:nginx][:certificate_path] = nil
