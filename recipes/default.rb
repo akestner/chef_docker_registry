@@ -20,60 +20,62 @@
 
 include_recipe 'docker::default'
 
+# @param [String] path_string
+# @return [Array]
+def split_dirname(path_string)
+    ::File.split(::File.dirname(path_string)).first.to_s.split(::File::SEPARATOR)
+end
+
+# @param [String] path
+# @param [String] owner
+# @param [String] group
+# @param [Integer] mode
+# @return nil
+def directory_recursive(path, owner = node[:docker_registry][:user], group = node[:docker_registry][:group], mode = 0755)
+    split_dirname(path).each do |dir_component|
+        unless dir_component.nil?
+            directory dir_component do
+                owner owner
+                group group
+                mode mode
+                action :create
+                not_if { ::File.exists?(dir_component) }
+            end
+        end
+    end
+end
+
 # setup users/groups, permissions
-if node[:docker_registry][:user] != 'root'
-    group node[:docker_registry][:group] do
-        action :create
-    end
-
-    user node[:docker_registry][:user] do
-        gid node[:docker_registry][:group]
-        home "/home/#{node[:docker_registry][:user]}"
-        shell '/bin/bash -l'
-        action :create
-    end
-
-    group 'sudo' do
-        members node[:docker_registry][:user]
-        append true
-        action :modify
-    end
-
-    public_key_dir = "/home/#{node[:docker_registry][:user]}/.ssh"
-else
-    public_key_dir = ::File.join(node[:docker_registry][:user], '.ssh').to_s
-end
-
-# make sure local storage path is created
-if node[:docker_registry][:storage] == 'local'
-    directory node[:docker_registry][:storage_path] do
-        owner node[:docker_registry][:user]
-        group node[:docker_registry][:group]
-        recursive true
-        mode 0776
-        action :create
-        not_if { ::File.directory?(dir) }
-    end
-end
-
-directory node[:docker_registry][:nginx][:config_dir] do
-    owner node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    recursive true
-    mode 0755
+group node[:docker_registry][:group] do
     action :create
-    not_if { ::File.directory?(node[:docker_registry][:nginx][:config_dir]) }
 end
 
-path_parent_dir = ::File.dirname(node[:docker_registry][:path]).to_s
-directory path_parent_dir do
-    owner node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    recursive true
-    mode 0766
+user node[:docker_registry][:user] do
+    supports :manage_home => (node[:docker_registry][:user] != 'root')
+    gid node[:docker_registry][:group]
+    shell '/bin/bash -l'
     action :create
-    not_if { ::File.directory?(path_parent_dir) }
 end
+
+user_home = ::Dir.home(node[:docker_registry][:user])
+
+user node[:docker_registry][:user] do
+    home user_home
+    action :modify
+end
+
+group 'sudo' do
+    members node[:docker_registry][:user]
+    append true
+    action :modify
+end
+
+public_key_dir = ::File.join(user_home, '.ssh').to_s
+
+dirs_to_create = [node[:docker_registry][:path], node[:docker_registry][:nginx][:config_dir], public_key_dir]
+dirs_to_create << node[:docker_registry][:storage_path] if node[:docker_registry][:storage] == 'local'
+
+dirs_to_create.each { |dir_to_create| directory_recursive(dir_to_create) }
 
 # clone dotcloud/docker-registry source
 git node[:docker_registry][:path] do
@@ -100,15 +102,6 @@ template node[:docker_registry][:nginx][:auth_users_file] do
     variables({
         :users => data_bag[:registry_users]
     })
-end
-
-directory public_key_dir do
-    owner node[:docker_registry][:user]
-    group node[:docker_registry][:group]
-    recursive true
-    mode 0700
-    action :create
-    not_if { ::File.directory?(public_key_dir) }
 end
 
 privileged_key_public = ::File.join(public_key_dir, 'healthguru.docker_registry.public.pem').to_s
