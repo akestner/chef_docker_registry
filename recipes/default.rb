@@ -33,7 +33,9 @@ end
 # @return nil
 def directory_recursive(path, owner = node[:docker_registry][:user], group = node[:docker_registry][:group], mode = 0755)
     split_dirname(path).each do |dir_component|
-        unless dir_component.nil?
+        if dir_component.blank?
+            Chef::Logger.log(::Logger::Severity::WARN, "dir_component.blank? == true, dir_component=#{dir_component}")
+        else
             directory dir_component do
                 owner owner
                 group group
@@ -57,7 +59,7 @@ user node[:docker_registry][:user] do
     action :create
 end
 
-user_home = ::Dir.home(node[:docker_registry][:user])
+user_home = node[:docker_registry][:user] == 'root' ? '/root' : "/home/#{node[:docker_registry][:user]}"
 
 user node[:docker_registry][:user] do
     home user_home
@@ -73,7 +75,7 @@ end
 public_key_dir = ::File.join(user_home, '.ssh').to_s
 
 dirs_to_create = [node[:docker_registry][:path], node[:docker_registry][:nginx][:config_dir], public_key_dir]
-dirs_to_create << node[:docker_registry][:storage_path] if node[:docker_registry][:storage] == 'local'
+dirs_to_create.push(node[:docker_registry][:storage_path]) if node[:docker_registry][:storage] == 'local'
 
 dirs_to_create.each { |dir_to_create| directory_recursive(dir_to_create) }
 

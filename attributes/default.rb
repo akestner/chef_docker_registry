@@ -21,20 +21,11 @@
 
 include_attribute 'docker::default'
 
-case node.chef_environment.to_s
+case node.chef_environment
     when 'production', 'prod'
         flavor = 'prod'
-        storage = node[:docker_registry][:storage] || 's3'
     else
         flavor = 'dev'
-        storage = node[:docker_registry][:storage] || 'local'
-end
-
-case storage
-    when 'local'
-        storage_path = "#{node[:docker_registry][:path]}/storage/#{flavor}"
-    else
-        storage_path = "registry/#{flavor}"
 end
 
 # core docker config
@@ -54,8 +45,8 @@ default[:docker_registry][:dockerfile_template] = 'Dockerfile.erb'
 
 # docker-registry specifics
 default[:docker_registry][:flavor] = flavor
-default[:docker_registry][:storage] = storage
-default[:docker_registry][:storage_path] = storage_path
+default[:docker_registry][:storage] = 's3'
+default[:docker_registry][:storage_path] = "registry/#{flavor}"
 default[:docker_registry][:repository] = (node[:docker_registry][:repository] || flavor)
 default[:docker_registry][:container_name] = (node[:docker_registry][:build_registry] ? node[:docker_registry][:name] : 'registry')
 default[:docker_registry][:container_tag] = '0.0.1'

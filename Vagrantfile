@@ -1,89 +1,92 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
-
 require 'vagrant'
 
 VAGRANTFILE_API_VERSION = 2
 
 # Vagrant Requirements
-Vagrant.require_version ">= 1.4.0"
+Vagrant.require_version '>= 1.4.0'
 
-#  plugins config
-Vagrant.require_plugin 'vagrant-berkshelf'
-Vagrant.require_plugin 'vagrant-omnibus'
+# Settings for guest VM
+BOX_NAME_BASE = ENV['BOX_NAME_BASE'] || 'ubuntu64-12.04.3'
+BOX_URL_BASE = ENV['BOX_URL_BASE'] || 'http://hgvagrant.s3.amazonaws.com/ubuntu64-12.04.3'
+AWS_REGION = ENV['AWS_REGION'] || 'us-east-1'
+AWS_AMI = ENV['AWS_AMI'] || 'ami-8f2718e6' # cannonical ubunutu 12.04LTS amd64, instance-store
+AWS_INSTANCE_TYPE = ENV['AWS_INSTANCE_TYPE'] || 'c1.medium'
+AWS_ACCESS_KEY_ID = ENV['AWS_ACCESS_KEY_ID'] || nil
+AWS_SECRET_ACCESS_KEY = ENV['AWS_SECRET_ACCESS_KEY'] || nil
+AWS_KEYPAIR_NAME = ENV['AWS_KEYPAIR_NAME'] || 'healthguru'
+AWS_SSH_KEY = ENV['AWS_SSH_KEY'] || '~/.ssh/id_rsa'
 
-VM_NAME = 'docker_registry'
-BOX_NAME_BASE = 'ubuntu64-12.04.3'
-BOX_URL_BASE = 'http://hgvagrant.s3.amazonaws.com/ubuntu64-12.04.3'
-VAGRANT_SSH_KEY = ENV['VAGRANT_SSH_KEY']
-SSH_USERNAME = 'vagrant'
+VAGRANT_SSH_KEY = ENV['VAGRANT_SSH_KEY'] || nil
 SSH_PASSWORD = 'vagrant'
 
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |global_config|
+RECIPES = ['hgdocker_registry::default']
 
-    global_config.berkshelf.enabled = true
-    global_config.omnibus.enabled = true
-    global_config.omnibus.chef_version = :latest
+Vagrant.configure(2) do |config|
 
-    global_config.vm.define VM_NAME do |config|
-
-        config.vm.hostname = VM_NAME
-
-        config.vm.network :private_network, ip: '192.168.33.233'
-
-        config.ssh.username = SSH_USERNAME
-        # Use the specified private key path if it is specified and not empty.
-        VAGRANT_SSH_KEY.nil? ?
-            config.ssh.password = SSH_PASSWORD :
-            config.ssh.private_key_path = VAGRANT_SSH_KEY
-        config.ssh.forward_agent = true
-
-        # setup vagrant for virtualbox provider (default)
-        config.vm.provider :virtualbox do |vbox, override|
-            # 'override' box name and url with provider-specific ones
-            override.vm.box = "#{BOX_NAME_BASE}_virtualbox"
-            override.vm.box_url = "#{BOX_URL_BASE}_virtualbox.box"
-
-            vbox.name = VM_NAME
-            vbox.gui = false
-            vbox.customize [
-                'modifyvm', :id,
-                '--memory', 1024,
-                '--cpus', 2,
-                '--natdnshostresolver1', 'on',
-                '--natdnsproxy1', 'on'
-            ]
-        end
-
-        # disable default vagrant synced_folder
-        config.vm.synced_folder '.', '/vagrant', :nfs => true
-        config.vm.provision :shell, :inline => 'ulimit -n 10000'
-
-        # resolve "stdin: is not a tty warning" for chef_solo provisioner
-        # related issue and proposed fix: https://github.com/mitchellh/vagrant/issues/1673
-        config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
-
-        # An array of symbols representing groups of cookbook described in the Vagrantfile
-        # to exclusively install and copy to Vagrant's shelf.
-        # config.berkshelf.only = []
-
-        # An array of symbols representing groups of cookbook described in the Vagrantfile
-        # to skip installing and copying to Vagrant's shelf.
-        # config.berkshelf.except = []
-
-        config.vm.provision :chef_solo do |chef|
-            chef.log_level = :info
-            chef.nfs = true
-            chef.cookbooks_path = 'cookbooks'
-
-            chef.encrypted_data_bag_secret_key_path = File.expand_path('~/.chef/encrypted_data_bag_secret')
-            chef.encrypted_data_bag_secret = "#{chef.provisioning_path}/encrypted_data_bag_secret"
-
-            ['docker_registry::default'].each do |recipe|
-                chef.add_recipe recipe
-            end
-
-            chef.custom_config_path = 'chef_streaming_fix.rb'
-        end
+    # setup vagrant for virtualbox provider (default)
+    config.vm.provider :virtualbox do |vbox, override|
+        # 'override' box name and url with provider-specific ones
+        override.vm.box = "#{BOX_NAME_BASE}_virtualbox"
+        override.vm.box_url = "#{BOX_URL_BASE}_virtualbox.box"
+        vbox.gui = false
     end
+
+    # setup vagrant for aws provider (use `vagrant up --provider=aws`)
+    config.vm.provider :aws do |aws, override|
+        # 'override' box name and url with provider-specific ones
+        override.vm.box = "#{BOX_NAME_BASE}_aws"
+        override.vm.box_url = "#{BOX_URL_BASE}_aws.box"
+
+        override.ssh.username = 'ubuntu'
+        override.ssh.private_key_path = AWS_SSH_KEY
+
+        aws.access_key_id = AWS_ACCESS_KEY_ID
+        aws.secret_access_key = AWS_SECRET_ACCESS_KEY
+        aws.keypair_name = AWS_KEYPAIR_NAME
+
+        aws.region = AWS_REGION
+        aws.ami = AWS_AMI
+        aws.instance_type = AWS_INSTANCE_TYPE
+
+        aws.tags = {
+            :Name => name.to_s
+        }
+    end
+
+    # Use the specified private key path if it is specified and not empty.
+    VAGRANT_SSH_KEY.nil? ?
+        config.ssh.password = SSH_PASSWORD :
+        config.ssh.private_key_path = VAGRANT_SSH_KEY
+
+    # enable ssh agent forwarding
+    config.ssh.forward_agent = true
+
+    # resolve "stdin: is not a tty warning" for chef_solo provisioner
+    # related issue and proposed fix: https://github.com/mitchellh/vagrant/issues/1673
+    config.ssh.shell = 'bash -c \'BASH_ENV=/etc/profile exec bash\''
+
+    # Chef-Solo Provisioner
+    config.vm.provision 'chef_solo' do |chef|
+        #chef.log_level = :debug
+        #chef.verbose_logging = true
+        chef.nfs = true
+        chef.cookbooks_path = 'cookbooks'
+        chef.roles_path = 'roles'
+        chef.data_bags_path = 'data_bags'
+        chef.environments_path = 'environments'
+
+        chef.encrypted_data_bag_secret_key_path = File.expand_path('~/.chef/encrypted_data_bag_secret')
+        chef.encrypted_data_bag_secret = "#{chef.provisioning_path}/encrypted_data_bag_secret"
+
+        RECIPES.each do |recipe|
+            chef.add_recipe(recipe)
+        end
+
+        chef.custom_config_path = 'chef_custom_config.rb'
+    end
+
+
+    # disable default vagrant synced_folder
+    config.vm.synced_folder '.', '/vagrant', :disabled => true
+
 end

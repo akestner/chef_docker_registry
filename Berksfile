@@ -1,3 +1,5 @@
-source 'http://api.berkshelf.com'
+site :opscode
 
 metadata
+
+cookbook 'docker'
